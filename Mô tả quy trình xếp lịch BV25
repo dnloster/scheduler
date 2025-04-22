@@ -1,0 +1,61 @@
+Chỉ tiêu BTTM => Xây dựng KHĐT => Dự báo HL => Khoa phân công giảng viên và nộp tiến trình HL
+
+Xếp lịch từ ngày 9/6 đến 14/11 hằng năm => 22 tuần
+Xếp 39 tiết/tuần
+Có 6 lớp: A, B, C, D, E, F
+Tất cả các lớp đều học 7 môn: A10, Q10, V30, V31, V32, V33, V34 	=> Tổng 843 tiết không tính môn V34
+Tổng số tiết bằng nhau giữa các lớp
+
+Xếp lịch theo cặp tiết, 1 ngày có 4 cặp tiết và 1 tiết thứ 9, trong đó: 3 cặp tiết đầu là của buổi sáng, cặp tiết còn lại và tiết thứ 9 là của buổi chiều
+Học từ thứ 2 đến thứ 6 trong tuần, nghỉ 2 ngày thứ 7 và chủ nhật
+Chiều thứ 5 hàng tuần bảo quản tuần, đánh dấu là BQ, không xếp lịch học nếu đã xếp đủ tổng số tiết trong tuần vào các ngày còn lại hoặc nếu chưa xếp đủ tổng số tiết thì có thể xếp lịch học vào cặp tiết 7-8 và để tiết thứ 9 bảo quản hoặc xếp lịch học vào cả buổi chiều (tiết 7-8-9)
+2 tiết đầu tiên của thứ 2 của tuần đầu tiên của tháng dành cho chào cờ, không xếp lịch và có đánh dấu riêng (hình ngôi sao)
+Các tiết lý thuyết không đánh dấu, các tiết thực hành đánh dấu gạch chân 
+Lịch tự ôn: Nếu đã xếp đủ tiết trong tuần, dư xếp tự ôn vào ngẫu nhiên tiết 9 hoặc cả buổi chiều (tiết 7-8-9) các buổi chiều trong tuần, đánh dấu là Ôn, sao cho trong ngày không bỏ trống tiết nào
+
+
+Ngày nghỉ (không xếp lịch): 
+	- Quốc khánh: 2 ngày (1 ngày 2/9 và 1 ngày liền trước hoặc liền sau tuỳ vào lịch của nhà nước); 
+	- khai giảng: 15/9 hoặc 16/9; 
+	- tập huấn cán bộ: 3 ngày; 
+	- 20/11: 1 ngày
+
+* A10: tổng 53 tiết
+Môn A10 học ghép lớp: A-B, C-D, E-F
+Xếp lịch tối đa 8 hoặc 10 tiết 1 tuần, tối đa 4 tiết/ngày
+Thi trong 3 tiết (có thể xếp trong 1 buổi chiều), sau khi học xong tối thiểu 5 ngày (không tính thứ 7, chủ nhật)
+
+* Q10
+Các môn Q: các tiết lý thuyết học ghép lớp; các tiết thực hành học tách lớp
+Môn Q10 gồm nhiều môn nhỏ: Q11, Q12, Q13, Q14, Q15, Q17, Q18
+Thi Q10 trong 6 tiết; sau khi học xong tối thiểu 2 ngày (không tính thứ 7, chủ nhật), thi tách lớp
+- Môn Q11: Tổng 12 tiết, Chỉ thực hành, chỉ xếp vào buổi chiều
+- Môn Q12: tổng 10 tiết, học 2 tiết lý thuyết và 8 tiết thực hành, học xong lý thuyết rồi đến thực hành, 2 tiết lý thuyết có thể học trong buổi sáng hoặc chiều, thực hành chỉ học trong buổi chiều?? (lớp E, F khác tổng số tiết với 4 lớp còn lại)
+- Môn Q13: tổng 30 tiết: 12 Lý thuyết, 18 thực hành, các tiết thực hành chỉ xếp buổi chiều hoặc 2 tiết đầu buổi sáng
+- Môn Q14: tổng 8 tiết: 4 lý thuyết, 4 thực hành, các tiết thực hành chỉ xếp trong 1 buổi chiều (mặc dù có thể bị thiếu 1 tiết)
+- Môn Q15: Tổng 12 tiết, Chỉ học thực hành và chỉ xếp học buổi chiều
+- Môn Q17: tổng 10 tiết, có thể xếp vào buổi sáng hoặc buổi chiều
+- Môn Q18: tổng 18 tiết: 12 lý thuyết, 6 thực hành, các tiết thực hành xếp sau khi học xong 12 tiết lý thuyết và có thể xếp học chiều hoặc trong 1 buổi sáng
+trong lịch sẽ hiển thị cụ thể các môn nhỏ
+
+* Môn chuyên ngành: V30, V31, V32, V33, V34
+Các môn V30, V31, V32, V33: Xếp lịch xen kẽ với các môn khác, không giới hạn
+Trong đó:
+- 2 môn V30, V31: kiểm tra 5 lần theo các đề mục: Đề mục 1, đề mục 2, đề mục 3, đề mục 4, đề mục 5
+Đề mục 1: kiểm tra trong 6 tiết sau khi học xong 132 tiết V30 và V31
+Đề mục 2: kiểm tra trong 6 tiết sau khi học xong 99 tiết V30 và V31
+Đề mục 3: kiểm tra trong 6 tiết sau khi học xong 136 tiết V30 và V31
+Đề mục 4: kiểm tra trong 6 tiết sau khi học xong 79 tiết V30 và V31
+Đề mục 5: kiểm tra trong 6 tiết sau khi học xong 81 tiết V30 và V31
+Các đề mục kiểm tra nên xếp vào toàn bộ 6 tiết của buổi sáng
+2 môn V30, V31 học song song, xen kẽ nhau và phải được xếp kín lịch từ đầu đến cuối khoá học và kết thúc bằng đề mục 5 (vào khoảng tuần thứ 2 tháng 11)
+
+- V32: tổng 36 tiết, học đầu tháng 9 (giữa đề mục 2 và đề mục 3
+Thi môn V32 trong 6 tiết (nên xếp trong 1 buổi sáng), sau khi học xong tối thiểu 2 ngày (không tính thứ 7, chủ nhật)
+
+- V33: học sau khi kiểm tra xong đề mục 3??
+Thi môn V33 trong 6 tiết (nên xếp trong 1 buổi sáng), sau khi học xong tối thiểu 2 ngày (không tính thứ 7, chủ nhật)
+
+Môn V34: xếp lịch vào tuần kế tiếp khi thi đề mục 5, học cuối cùng khi tất cả các môn trên đã kết thúc và liên tục trong 3 tuần, kể cả ngày nghỉ, không thi
+
+Sau khi môn V34 kết thúc, ôn thi và thi tốt nghiệp trong 2 tuần
