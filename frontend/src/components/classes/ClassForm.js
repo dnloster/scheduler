@@ -13,76 +13,116 @@ import {
     MenuItem,
     Grid,
     Alert,
-    List,
-    ListItem,
-    ListItemText,
-    Divider,
-    Chip,
+    CircularProgress,
 } from "@mui/material";
 import {
     Save as SaveIcon,
     ArrowBack as ArrowBackIcon,
     Delete as DeleteIcon,
-    PersonAdd as PersonAddIcon,
+    School as SchoolIcon,
 } from "@mui/icons-material";
-import axios from "axios";
-import { createClass, getClasses } from "../../api/classService";
+import { createClass, getClassById, updateClass, deleteClass } from "../../api/classService";
 import { getDepartments } from "../../api/departmentService";
 
 const ClassForm = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const isEditMode = id !== undefined;
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(isEditMode);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState(null);
     const [success, setSuccess] = useState(false);
 
-    // Class data state
+    // Class data state with default values
     const [classData, setClassData] = useState({
         name: "",
-        department_id: 1,
+        department: "",
+        departmentId: "", // Added departmentId field to store just the ID
         studentCount: 0,
+        students: [],
     });
 
-    // Student list (for demonstration)
-    const [students, setStudents] = useState([]);
-
     // Reference data
-    const [departments, setDepartments] = useState([{ id: 1, name: "Sơ cấp báo vụ" }]);
+    const [departments, setDepartments] = useState([]);
+    const [loadingDepartments, setLoadingDepartments] = useState(true);
 
+    // Fetch departments and class data on component mount
     useEffect(() => {
-        const fetchData = async () => {
-            setLoading(true);
-            setError(null);
-            try {
-                const departmentsData = await getDepartments();
-                if (departmentsData && departmentsData.length > 0) {
-                    console.log("Fetched departments:", departmentsData);
-                    setDepartments(departmentsData);
-                } else {
-                    // Fallback to sample data
-                    setDepartments([
-                        { id: 1, name: "Sơ cấp báo vụ" },
-                        { id: 2, name: "Công nghệ thông tin" },
-                    ]);
-                }
-            } catch (error) {
-                console.error("Error fetching data:", error);
-                setError("Có lỗi xảy ra khi tải dữ liệu.");
-            } finally {
-                setLoading(false);
-            }
-        };
+        fetchDepartments();
 
-        fetchData();
-    }, []);
+        if (isEditMode) {
+            fetchClassData();
+        }
+    }, [id, isEditMode]);
+
+    const fetchDepartments = async () => {
+        setLoadingDepartments(true);
+        try {
+            const response = await getDepartments();
+            if (response && response.length > 0) {
+                setDepartments(response);
+                // Set default department for new class
+                if (!isEditMode) {
+                    setClassData((prev) => ({
+                        ...prev,
+                        department: response[0]._id,
+                        departmentId: response[0]._id,
+                    }));
+                }
+            } else {
+                setDepartments([{ _id: "1", name: "Sơ cấp báo vụ" }]);
+                if (!isEditMode) {
+                    setClassData((prev) => ({
+                        ...prev,
+                        department: "1",
+                        departmentId: "1",
+                    }));
+                }
+            }
+        } catch (err) {
+            console.error("Error fetching departments:", err);
+            setDepartments([{ _id: "1", name: "Sơ cấp báo vụ" }]);
+            if (!isEditMode) {
+                setClassData((prev) => ({
+                    ...prev,
+                    department: "1",
+                    departmentId: "1",
+                }));
+            }
+        } finally {
+            setLoadingDepartments(false);
+        }
+    };
+
+    const fetchClassData = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const classResponse = await getClassById(id);
+            if (classResponse) {
+                // Transform API response to match local state format
+                setClassData({
+                    ...classResponse,
+                    departmentId: classResponse.department?._id || classResponse.department, // Handle both object or string ID
+                });
+            } else {
+                setError("Không tìm thấy lớp học với ID này.");
+            }
+        } catch (err) {
+            console.error("Error fetching class data:", err);
+            setError("Có lỗi xảy ra khi tải dữ liệu lớp học.");
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const handleChange = (e) => {
         const { name, value } = e.target;
         setClassData((prev) => ({
             ...prev,
             [name]: value,
+            // Also update departmentId if department field changes
+            ...(name === "department" ? { departmentId: value } : {}),
         }));
     };
 
@@ -99,6 +139,7 @@ const ClassForm = () => {
         e.preventDefault();
         setSaving(true);
         setError(null);
+        setSuccess(false);
 
         // Validate the form data
         if (!classData.name) {
@@ -107,34 +148,69 @@ const ClassForm = () => {
             return;
         }
 
-        // In a real app, you would make an API call to save the class data
-        await createClass(classData); // Call the API to create the class
-        setTimeout(() => {
-            setSaving(false);
+        try {
+            // Prepare data for API
+            const classDataToSave = {
+                name: classData.name,
+                department: classData.departmentId || classData.department,
+                studentCount: classData.studentCount,
+                students: classData.students || [],
+            };
+
+            if (isEditMode) {
+                await updateClass(id, classDataToSave);
+            } else {
+                await createClass(classDataToSave);
+            }
+
             setSuccess(true);
+
             // Auto navigate back after success
             setTimeout(() => {
                 navigate("/classes");
             }, 1500);
-        }, 1000);
-    };
-
-    const handleDelete = () => {
-        if (window.confirm("Bạn có chắc chắn muốn xóa lớp học này?")) {
-            // In a real app, you would make an API call to delete the class
-            navigate("/classes");
+        } catch (err) {
+            console.error("Error saving class:", err);
+            setError("Đã xảy ra lỗi khi lưu lớp học. Vui lòng thử lại sau.");
+        } finally {
+            setSaving(false);
         }
     };
 
-    const handleAddStudent = () => {
-        alert("Chức năng thêm học viên sẽ được phát triển trong phiên bản tiếp theo.");
+    const handleDelete = async () => {
+        if (window.confirm("Bạn có chắc chắn muốn xóa lớp học này?")) {
+            try {
+                await deleteClass(id);
+                setSuccess(true);
+                setTimeout(() => {
+                    navigate("/classes");
+                }, 1000);
+            } catch (error) {
+                console.error("Error deleting class:", error);
+                setError("Không thể xóa lớp học. Vui lòng thử lại sau.");
+            }
+        }
     };
+
+    if (loading) {
+        return (
+            <Container
+                maxWidth="lg"
+                sx={{ mt: 4, mb: 4, display: "flex", justifyContent: "center", alignItems: "center", height: "50vh" }}
+            >
+                <Paper elevation={3} sx={{ p: 4, textAlign: "center" }}>
+                    <CircularProgress color="primary" sx={{ mb: 2 }} />
+                    <Typography variant="h6">Đang tải thông tin lớp học...</Typography>
+                </Paper>
+            </Container>
+        );
+    }
 
     return (
         <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-            <Paper elevation={3} sx={{ p: 3 }}>
+            <Paper elevation={3} sx={{ p: 3, borderRadius: 2 }}>
                 <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-                    <Typography variant="h4">
+                    <Typography variant="h5" fontWeight="medium" color="primary">
                         {isEditMode ? `Chỉnh sửa lớp ${classData.name}` : "Thêm lớp học mới"}
                     </Typography>
                     <Box>
@@ -142,7 +218,7 @@ const ClassForm = () => {
                             variant="outlined"
                             startIcon={<ArrowBackIcon />}
                             onClick={() => navigate("/classes")}
-                            sx={{ mr: 1 }}
+                            sx={{ mr: 1, borderRadius: 2 }}
                         >
                             Quay lại
                         </Button>
@@ -152,7 +228,7 @@ const ClassForm = () => {
                                 color="error"
                                 startIcon={<DeleteIcon />}
                                 onClick={handleDelete}
-                                sx={{ mr: 1 }}
+                                sx={{ mr: 1, borderRadius: 2 }}
                             >
                                 Xóa
                             </Button>
@@ -160,9 +236,10 @@ const ClassForm = () => {
                         <Button
                             variant="contained"
                             color="primary"
-                            startIcon={<SaveIcon />}
+                            startIcon={saving ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
                             onClick={handleSubmit}
                             disabled={saving}
+                            sx={{ borderRadius: 2 }}
                         >
                             {saving ? "Đang lưu..." : "Lưu"}
                         </Button>
@@ -170,95 +247,64 @@ const ClassForm = () => {
                 </Box>
 
                 {error && (
-                    <Alert severity="error" sx={{ mb: 3 }}>
+                    <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>
                         {error}
                     </Alert>
                 )}
 
                 {success && (
-                    <Alert severity="success" sx={{ mb: 3 }}>
+                    <Alert severity="success" sx={{ mb: 3, borderRadius: 2 }}>
                         Lớp học đã được lưu thành công!
                     </Alert>
                 )}
 
-                <Grid sx={{ xs: 12, md: 6 }}>
+                <Grid container>
                     <TextField
                         name="name"
                         label="Tên lớp"
-                        value={classData.name}
+                        value={classData.name || ""}
                         onChange={handleChange}
                         fullWidth
                         required
                         sx={{ mb: 2 }}
                     />
                 </Grid>
-                <Grid sx={{ xs: 12, md: 6 }}>
-                    <FormControl fullWidth sx={{ mb: 2 }}>
-                        <InputLabel>Chuyên ngành</InputLabel>
+                <Grid container>
+                    <FormControl fullWidth sx={{ mb: 2 }} disabled={loadingDepartments}>
+                        <InputLabel id="department-label">
+                            <Box display="flex" alignItems="center" gap={0.5}>
+                                <SchoolIcon fontSize="small" />
+                                <span>Chuyên ngành</span>
+                            </Box>
+                        </InputLabel>
                         <Select
-                            name="departmentId"
-                            value={classData.department_id}
+                            labelId="department-label"
+                            name="department"
+                            value={classData.departmentId || classData.department || ""}
                             label="Chuyên ngành"
                             onChange={handleChange}
+                            endAdornment={loadingDepartments && <CircularProgress size={20} sx={{ mr: 2 }} />}
                         >
                             {departments.map((dept) => (
-                                <MenuItem key={dept._id} value={dept._id}>
+                                <MenuItem key={dept._id || dept.id} value={dept._id || dept.id}>
                                     {dept.name}
                                 </MenuItem>
                             ))}
                         </Select>
                     </FormControl>
                 </Grid>
-                <Grid sx={{ xs: 12, md: 6 }}>
+                <Grid container>
                     <TextField
                         name="studentCount"
                         label="Số lượng học viên"
                         type="number"
-                        value={classData.studentCount}
+                        value={classData.studentCount || 0}
                         onChange={handleNumericChange}
                         fullWidth
+                        slotProps={{ input: { min: 0 } }}
                         sx={{ mb: 2 }}
                     />
                 </Grid>
-
-                {isEditMode && (
-                    <Grid item xs={12}>
-                        <Divider sx={{ my: 2 }} />
-                        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-                            <Typography variant="h6">Danh sách học viên</Typography>
-                            <Button variant="outlined" startIcon={<PersonAddIcon />} onClick={handleAddStudent}>
-                                Thêm học viên
-                            </Button>
-                        </Box>
-
-                        {students.length > 0 ? (
-                            <List>
-                                {students.map((student) => (
-                                    <ListItem
-                                        key={student.id}
-                                        divider
-                                        secondaryAction={
-                                            <Chip label={student.studentId} variant="outlined" size="small" />
-                                        }
-                                    >
-                                        <ListItemText primary={student.name} />
-                                    </ListItem>
-                                ))}
-                            </List>
-                        ) : (
-                            <Alert severity="info">
-                                Chưa có học viên nào trong lớp này. Sử dụng nút "Thêm học viên" để thêm học viên mới.
-                            </Alert>
-                        )}
-                        {students.length > 0 && students.length < 5 && (
-                            <Box mt={2}>
-                                <Alert severity="info">
-                                    Hiển thị 5 học viên đầu tiên của tổng số {classData.studentCount} học viên.
-                                </Alert>
-                            </Box>
-                        )}
-                    </Grid>
-                )}
             </Paper>
         </Container>
     );

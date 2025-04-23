@@ -151,7 +151,7 @@ const ClassList = () => {
         return (
             <Grid container spacing={3}>
                 {filteredClasses.map((cls) => (
-                    <Grid item xs={12} sm={6} md={4} key={cls.id}>
+                    <Grid sx={{ xs: 12, sm: 6, md: 4 }} key={cls.id}>
                         <Card sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
                             <CardContent sx={{ flexGrow: 1 }}>
                                 <Typography gutterBottom variant="h5" component="div">
@@ -177,7 +177,7 @@ const ClassList = () => {
                                 <Button
                                     size="small"
                                     component={Link}
-                                    to={`/classes/${cls._id}/edit`}
+                                    to={`/classes/${cls.id}`}
                                     startIcon={<EditIcon />}
                                 >
                                     Sửa
@@ -205,21 +205,26 @@ const ClassList = () => {
                 <Table sx={{ minWidth: 650 }} aria-label="classes table">
                     <TableHead>
                         <TableRow>
-                            <TableCell>ID</TableCell>
                             <TableCell>Tên Lớp</TableCell>
-                            <TableCell>Khoa/Bộ môn</TableCell>
+                            <TableCell>Chuyên ngành</TableCell>
                             <TableCell align="right">Số học viên</TableCell>
-                            <TableCell align="center">Hành động</TableCell>
+                            <TableCell align="center">Thao tác</TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
                         {filteredClasses.map((cls) => (
-                            <TableRow key={cls.id} sx={{ "&:last-child td, &:last-child th": { border: 0 } }}>
-                                <TableCell component="th" scope="row">
-                                    {cls.id}
-                                </TableCell>
+                            <TableRow
+                                key={cls.id}
+                                sx={{
+                                    "&:last-child td, &:last-child th": { border: 0 },
+                                    "&:hover": {
+                                        backgroundColor: "rgba(0, 0, 0, 0.04)",
+                                        transition: "background-color 0.2s ease",
+                                    },
+                                }}
+                            >
                                 <TableCell>{cls.name}</TableCell>
-                                <TableCell>{getDepartmentName(cls.departmentId)}</TableCell>
+                                <TableCell>{getDepartmentName(cls.department)}</TableCell>
                                 <TableCell align="right">{cls.studentCount}</TableCell>
                                 <TableCell align="center">
                                     <Tooltip title="Xem lịch học">
@@ -236,7 +241,7 @@ const ClassList = () => {
                                         <IconButton
                                             aria-label="edit"
                                             component={Link}
-                                            to={`/classes/${cls.id}/edit`}
+                                            to={`/classes/${cls.id}`}
                                             size="small"
                                         >
                                             <EditIcon />

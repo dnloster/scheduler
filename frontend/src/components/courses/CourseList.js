@@ -364,7 +364,7 @@ const CourseList = () => {
                         const practicalHours = getPracticalHours(course);
 
                         return (
-                            <Grid sx={{ xs: 12, sm: 6, md: 4 }} key={course._id}>
+                            <Grid size={4} sx={{ xs: 12, sm: 6, md: 4 }} key={course._id}>
                                 <Card sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
                                     <CardContent sx={{ flexGrow: 1 }}>
                                         <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>

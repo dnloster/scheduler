@@ -233,6 +233,22 @@ app.get("/api/classes", async (req, res) => {
     }
 });
 
+// get class by ID
+app.get("/api/classes/:id", async (req, res) => {
+    try {
+        const classItem = await Class.findById(req.params.id).populate("department", "name");
+
+        if (!classItem) {
+            return res.status(404).json({ error: "Class not found" });
+        }
+
+        res.json(classItem);
+    } catch (error) {
+        console.error(`Error fetching class with ID ${req.params.id}:`, error);
+        res.status(500).json({ error: "Failed to fetch class" });
+    }
+});
+
 app.get("/api/classes/department/:departmentId", async (req, res) => {
     try {
         const classes = await Class.find({ department: req.params.departmentId }).populate("department", "name");
@@ -558,7 +574,6 @@ app.get("/api/events/:id", async (req, res) => {
 app.get("/api/events/department/:departmentId", async (req, res) => {
     try {
         const events = await SpecialEvent.find({ department: req.params.departmentId }).populate("department", "name");
-        console.log(events);
         res.json(events);
     } catch (error) {
         console.error(`Error fetching events for department ID ${req.params.departmentId}:`, error);
