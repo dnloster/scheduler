@@ -158,7 +158,7 @@ const ClassList = () => {
                                     Lớp {cls.name}
                                 </Typography>
                                 <Typography variant="body2" color="text.secondary">
-                                    Chuyên ngành: {getDepartmentName(cls.departmentId)}
+                                    Chuyên ngành: {getDepartmentName(cls.department)}
                                 </Typography>
                                 <Box sx={{ display: "flex", alignItems: "center", mt: 1 }}>
                                     <PeopleIcon sx={{ mr: 1, fontSize: "small" }} />
@@ -177,7 +177,7 @@ const ClassList = () => {
                                 <Button
                                     size="small"
                                     component={Link}
-                                    to={`/classes/${cls.id}/edit`}
+                                    to={`/classes/${cls._id}/edit`}
                                     startIcon={<EditIcon />}
                                 >
                                     Sửa

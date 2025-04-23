@@ -217,18 +217,22 @@ const ScheduleGenerator = () => {
                     setCourses(coursesData);
 
                     // Set course configurations based on the courses data
-                    const initialCourseConfigs = coursesData.map((course) => ({
-                        id: course.id,
-                        code: course.code,
-                        name: course.name,
-                        totalHours: course.total_hours || 0,
-                        groupedClasses: null,
-                        maxHoursPerWeek: course.max_hours_per_week || null,
-                        maxHoursPerDay: course.max_hours_per_day || null,
-                        minDaysBeforeExam: course.min_days_before_exam || 0,
-                        examDuration: course.exam_duration || 0,
-                    }));
+                    const initialCourseConfigs = coursesData.map((course, index) => {
+                        console.log(`Mapping course: ${course.name} with ID: ${course.id || course._id}`);
+                        return {
+                            id: course.id || course._id || `course_${index}`, // Đảm bảo ID luôn có giá trị duy nhất
+                            code: course.code,
+                            name: course.name,
+                            totalHours: course.total_hours || 0,
+                            groupedClasses: null,
+                            maxHoursPerWeek: course.max_hours_per_week || null,
+                            maxHoursPerDay: course.max_hours_per_day || null,
+                            minDaysBeforeExam: course.min_days_before_exam || 0,
+                            examDuration: course.exam_duration || 0,
+                        };
+                    });
 
+                    console.log("Initialized course configs:", initialCourseConfigs);
                     setCourseConfigs(initialCourseConfigs);
                 }
             } catch (error) {
@@ -268,12 +272,7 @@ const ScheduleGenerator = () => {
 
         return eventsData.filter((event) => {
             // Include events with matching department or department-independent events (like national holidays)
-            return (
-                !event.department ||
-                event.department === selectedDepartment ||
-                event.departmentId === selectedDepartment ||
-                event.type === "holiday"
-            ); // Always include holidays
+            return !event.department || event.department === selectedDepartment; // Always include holidays
         });
     }, [eventsData, selectedDepartment]);
 
@@ -364,7 +363,12 @@ const ScheduleGenerator = () => {
     };
 
     const handleUpdateCourseConfig = (id, field, value) => {
-        setCourseConfigs(courseConfigs.map((config) => (config.id === id ? { ...config, [field]: value } : config)));
+        setCourseConfigs((prevConfigs) =>
+            prevConfigs.map((config) => {
+                console.log(`Course ID: ${config.id} comparing with ${id}`);
+                return config.id === id ? { ...config, [field]: value } : config;
+            })
+        );
     };
 
     const handleGenerateSchedule = async () => {
@@ -666,6 +670,7 @@ const ScheduleGenerator = () => {
                                         InputProps={{
                                             endAdornment: <InputAdornment position="end">tuần</InputAdornment>,
                                         }}
+                                        disabled
                                         helperText="Tổng số tuần học trong học kỳ"
                                     />
                                 </Grid>
@@ -684,16 +689,6 @@ const ScheduleGenerator = () => {
                                 </Box>
                             </Box>
                         </Paper>
-
-                        <Box sx={{ display: "flex", justifyContent: "center", mt: 2 }}>
-                            <Alert severity="info" icon={<SchoolIcon />} sx={{ width: "100%" }}>
-                                <AlertTitle>Thông tin quan trọng</AlertTitle>
-                                <Typography variant="body2">
-                                    Việc chọn đúng chuyên ngành và khoảng thời gian sẽ đảm bảo lịch học được tạo phù hợp
-                                    với tất cả lớp thuộc chuyên ngành này.
-                                </Typography>
-                            </Alert>
-                        </Box>
                     </Box>
                 );
             case 1:
@@ -701,11 +696,18 @@ const ScheduleGenerator = () => {
                     <Box>
                         <Paper elevation={1} sx={{ p: 3, mb: 3, borderLeft: "4px solid #ff9800" }}>
                             <Typography variant="h6" gutterBottom color="warning.main">
-                                Sự kiện định kỳ
+                                Sự kiện định kỳ cố định
                             </Typography>
                             <Grid container spacing={2}>
                                 {filteredEvents
-                                    .filter((event) => event.type === "periodic")
+                                    .filter(
+                                        (event) =>
+                                            event.type === "periodic" &&
+                                            (event.name.toLowerCase().includes("chào cờ") ||
+                                                event.name.toLowerCase().includes("bảo quản") ||
+                                                event.name.toLowerCase().includes("ngày nhà giáo") ||
+                                                event.recurring_pattern)
+                                    )
                                     .map((event) => (
                                         <Grid item xs={12} md={6} key={event._id}>
                                             <FormControlLabel
@@ -735,43 +737,141 @@ const ScheduleGenerator = () => {
                                             />
                                         </Grid>
                                     ))}
-                                {filteredEvents.filter((event) => event.type === "periodic").length === 0 && (
+                                {filteredEvents.filter(
+                                    (event) =>
+                                        event.type === "periodic" &&
+                                        (event.name.toLowerCase().includes("chào cờ") ||
+                                            event.name.toLowerCase().includes("bảo quản") ||
+                                            event.name.toLowerCase().includes("ngày nhà giáo") ||
+                                            event.recurring_pattern)
+                                ).length === 0 && (
                                     <Grid item xs={12}>
                                         <Typography variant="body2" color="text.secondary" sx={{ fontStyle: "italic" }}>
-                                            Không có sự kiện định kỳ nào từ cơ sở dữ liệu. Sử dụng sự kiện mặc định.
+                                            Không có sự kiện định kỳ cố định nào từ cơ sở dữ liệu
                                         </Typography>
-                                        <Grid container spacing={2} sx={{ mt: 1 }}>
-                                            <Grid item xs={12} md={6}>
-                                                <FormControlLabel
-                                                    control={
-                                                        <Checkbox
-                                                            checked={flagRaising}
-                                                            onChange={(e) => setFlagRaising(e.target.checked)}
-                                                            color="warning"
-                                                        />
-                                                    }
-                                                    label="Chào cờ (Thứ 2 đầu tháng, 2 tiết đầu buổi sáng)"
-                                                />
-                                            </Grid>
-                                            <Grid item xs={12} md={6}>
-                                                <FormControlLabel
-                                                    control={
-                                                        <Checkbox
-                                                            checked={thursdayMaintenance}
-                                                            onChange={(e) => setThursdayMaintenance(e.target.checked)}
-                                                            color="warning"
-                                                        />
-                                                    }
-                                                    label="Bảo quản (Chiều thứ 5 hàng tuần)"
-                                                />
-                                            </Grid>
-                                        </Grid>
                                     </Grid>
                                 )}
                             </Grid>
                         </Paper>
 
-                        <Paper elevation={1} sx={{ p: 3, mb: 3, borderLeft: "4px solid #f44336" }}>
+                        <Paper elevation={1} sx={{ p: 3, mb: 3, borderLeft: "4px solid #673ab7" }}>
+                            <Typography variant="h6" gutterBottom sx={{ color: "#673ab7" }}>
+                                Sự kiện đặc biệt có ngày cụ thể
+                            </Typography>
+                            <Grid container spacing={2}>
+                                {filteredEvents
+                                    .filter(
+                                        (event) =>
+                                            (event.type === "periodic" &&
+                                                !event.name.toLowerCase().includes("chào cờ") &&
+                                                !event.name.toLowerCase().includes("bảo quản") &&
+                                                !event.name.toLowerCase().includes("ngày nhà giáo") &&
+                                                !event.recurring_pattern) ||
+                                            event.type === "special"
+                                    )
+                                    .map((event) => (
+                                        <Grid item xs={12} md={6} key={event._id}>
+                                            <Box sx={{ border: "1px solid #e0e0e0", borderRadius: 1, p: 2, mb: 1 }}>
+                                                <FormControlLabel
+                                                    control={
+                                                        <Checkbox
+                                                            checked={event.selected !== false} // Default to true if not set
+                                                            onChange={(e) => {
+                                                                // Update event selection state
+                                                                setEventsData(
+                                                                    eventsData.map((e) =>
+                                                                        e._id === event._id
+                                                                            ? {
+                                                                                  ...e,
+                                                                                  selected:
+                                                                                      e.selected === false
+                                                                                          ? true
+                                                                                          : false,
+                                                                              }
+                                                                            : e
+                                                                    )
+                                                                );
+                                                            }}
+                                                            sx={{ color: "#673ab7" }}
+                                                        />
+                                                    }
+                                                    label={<Typography fontWeight="medium">{event.name}</Typography>}
+                                                />
+                                                <Grid container spacing={2} sx={{ mt: 1, pl: 4 }}>
+                                                    <Grid item xs={12} md={6}>
+                                                        <DatePicker
+                                                            label="Ngày diễn ra"
+                                                            value={event.date ? dayjs(event.date) : null}
+                                                            onChange={(newValue) => {
+                                                                setEventsData(
+                                                                    eventsData.map((e) =>
+                                                                        e._id === event._id
+                                                                            ? {
+                                                                                  ...e,
+                                                                                  date: newValue
+                                                                                      ? newValue.format("YYYY-MM-DD")
+                                                                                      : null,
+                                                                              }
+                                                                            : e
+                                                                    )
+                                                                );
+                                                            }}
+                                                            slotProps={{
+                                                                textField: {
+                                                                    fullWidth: true,
+                                                                    helperText: "Chọn ngày cho sự kiện đặc biệt",
+                                                                    required: true,
+                                                                    size: "small",
+                                                                },
+                                                            }}
+                                                        />
+                                                    </Grid>
+                                                    <Grid item xs={12} md={6}>
+                                                        <TextField
+                                                            label="Số ngày"
+                                                            type="number"
+                                                            value={event.duration_days || 1}
+                                                            onChange={(e) => {
+                                                                const value = parseInt(e.target.value) || 1;
+                                                                setEventsData(
+                                                                    eventsData.map((ev) =>
+                                                                        ev._id === event._id
+                                                                            ? {
+                                                                                  ...ev,
+                                                                                  duration_days: value < 1 ? 1 : value,
+                                                                              }
+                                                                            : ev
+                                                                    )
+                                                                );
+                                                            }}
+                                                            fullWidth
+                                                            InputProps={{ inputProps: { min: 1 } }}
+                                                            size="small"
+                                                        />
+                                                    </Grid>
+                                                </Grid>
+                                            </Box>
+                                        </Grid>
+                                    ))}
+                                {filteredEvents.filter(
+                                    (event) =>
+                                        (event.type === "periodic" &&
+                                            !event.name.toLowerCase().includes("chào cờ") &&
+                                            !event.name.toLowerCase().includes("bảo quản") &&
+                                            !event.name.toLowerCase().includes("ngày nhà giáo") &&
+                                            !event.recurring_pattern) ||
+                                        event.type === "special"
+                                ).length === 0 && (
+                                    <Grid item xs={12}>
+                                        <Typography variant="body2" color="text.secondary" sx={{ fontStyle: "italic" }}>
+                                            Không có sự kiện đặc biệt nào từ cơ sở dữ liệu
+                                        </Typography>
+                                    </Grid>
+                                )}
+                            </Grid>
+                        </Paper>
+
+                        <Paper elevation={1} sx={{ p: 3, borderLeft: "4px solid #f44336" }}>
                             <Typography variant="h6" gutterBottom color="error.main">
                                 Ngày nghỉ lễ
                             </Typography>
@@ -810,123 +910,8 @@ const ScheduleGenerator = () => {
                                 {filteredEvents.filter((event) => event.type === "holiday").length === 0 && (
                                     <Grid item xs={12}>
                                         <Typography variant="body2" color="text.secondary" sx={{ fontStyle: "italic" }}>
-                                            Không có ngày nghỉ lễ nào từ cơ sở dữ liệu. Sử dụng ngày nghỉ lễ mặc định.
+                                            Không có ngày nghỉ lễ nào từ cơ sở dữ liệu
                                         </Typography>
-                                        <Grid container spacing={2} sx={{ mt: 1 }}>
-                                            <Grid item xs={12} md={6}>
-                                                <FormControlLabel
-                                                    control={
-                                                        <Checkbox
-                                                            checked={nationalHoliday}
-                                                            onChange={(e) => setNationalHoliday(e.target.checked)}
-                                                            color="error"
-                                                        />
-                                                    }
-                                                    label="Quốc khánh (2/9 và 1 ngày liền kề)"
-                                                />
-                                            </Grid>
-                                            <Grid item xs={12} md={6}>
-                                                <DatePicker
-                                                    label="Ngày Quốc khánh"
-                                                    value={nationalHolidayDate}
-                                                    onChange={(newValue) => setNationalHolidayDate(newValue)}
-                                                    slotProps={{
-                                                        textField: {
-                                                            fullWidth: true,
-                                                            helperText: "Chọn ngày Quốc khánh",
-                                                        },
-                                                    }}
-                                                />
-                                            </Grid>
-                                            <Grid item xs={12} md={6}>
-                                                <FormControlLabel
-                                                    control={
-                                                        <Checkbox
-                                                            checked={openingCeremony}
-                                                            onChange={(e) => setOpeningCeremony(e.target.checked)}
-                                                            color="error"
-                                                        />
-                                                    }
-                                                    label="Khai giảng (15/9 hoặc 16/9)"
-                                                />
-                                            </Grid>
-                                            <Grid item xs={12} md={6}>
-                                                <DatePicker
-                                                    label="Ngày Khai giảng"
-                                                    value={openingCeremonyDate}
-                                                    onChange={(newValue) => setOpeningCeremonyDate(newValue)}
-                                                    slotProps={{
-                                                        textField: {
-                                                            fullWidth: true,
-                                                            helperText: "Chọn ngày Khai giảng",
-                                                        },
-                                                    }}
-                                                />
-                                            </Grid>
-                                            <Grid item xs={12} md={6}>
-                                                <FormControlLabel
-                                                    control={
-                                                        <Checkbox
-                                                            checked={staffTraining}
-                                                            onChange={(e) => setStaffTraining(e.target.checked)}
-                                                            color="error"
-                                                        />
-                                                    }
-                                                    label="Tập huấn cán bộ (3 ngày)"
-                                                />
-                                            </Grid>
-                                            <Grid item xs={12} md={6}>
-                                                <DatePicker
-                                                    label="Ngày Tập huấn"
-                                                    value={staffTrainingDate}
-                                                    onChange={(newValue) => setStaffTrainingDate(newValue)}
-                                                    slotProps={{
-                                                        textField: {
-                                                            fullWidth: true,
-                                                            helperText: "Chọn ngày Tập huấn",
-                                                        },
-                                                    }}
-                                                />
-                                            </Grid>
-                                            <Grid item xs={12} md={6}>
-                                                <TextField
-                                                    label="Thời gian Tập huấn (ngày)"
-                                                    type="number"
-                                                    value={staffTrainingDuration}
-                                                    onChange={(e) =>
-                                                        setStaffTrainingDuration(parseInt(e.target.value) || 1)
-                                                    }
-                                                    fullWidth
-                                                    helperText="Thời lượng Tập huấn (ngày)"
-                                                    InputProps={{ inputProps: { min: 1 } }}
-                                                />
-                                            </Grid>
-                                            <Grid item xs={12} md={6}>
-                                                <FormControlLabel
-                                                    control={
-                                                        <Checkbox
-                                                            checked={teacherDay}
-                                                            onChange={(e) => setTeacherDay(e.target.checked)}
-                                                            color="error"
-                                                        />
-                                                    }
-                                                    label="Ngày Nhà giáo (20/11)"
-                                                />
-                                            </Grid>
-                                            <Grid item xs={12} md={6}>
-                                                <DatePicker
-                                                    label="Ngày Nhà giáo"
-                                                    value={teacherDayDate}
-                                                    onChange={(newValue) => setTeacherDayDate(newValue)}
-                                                    slotProps={{
-                                                        textField: {
-                                                            fullWidth: true,
-                                                            helperText: "Chọn ngày Nhà giáo",
-                                                        },
-                                                    }}
-                                                />
-                                            </Grid>
-                                        </Grid>
                                     </Grid>
                                 )}
                             </Grid>
@@ -953,12 +938,6 @@ const ScheduleGenerator = () => {
                                         label="Ngày diễn ra"
                                         value={newEventDate}
                                         onChange={(newValue) => setNewEventDate(newValue)}
-                                        slotProps={{
-                                            textField: {
-                                                fullWidth: true,
-                                                helperText: "Chọn ngày diễn ra sự kiện",
-                                            },
-                                        }}
                                     />
                                 </Grid>
                                 <Grid item xs={12} md={3}>
@@ -968,7 +947,6 @@ const ScheduleGenerator = () => {
                                         value={newEventDuration}
                                         onChange={(e) => setNewEventDuration(parseInt(e.target.value) || 1)}
                                         fullWidth
-                                        helperText="Thời lượng sự kiện (ngày)"
                                         InputProps={{ inputProps: { min: 1 } }}
                                     />
                                 </Grid>
