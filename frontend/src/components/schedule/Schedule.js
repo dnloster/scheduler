@@ -191,11 +191,44 @@ const Schedule = () => {
             return null;
         }
 
-        // Hiển thị mã môn học
+        // Xác định loại sự kiện/lịch học để hiển thị phù hợp
+        let backgroundColor = "#e8f5e9"; // Mặc định là lý thuyết
+        let borderStyle = "none";
+        let label = schedule.course_code || "";
+        let icon = null;
+
+        if (schedule.special_event_id) {
+            // Đây là sự kiện đặc biệt
+            if (schedule.notes?.toLowerCase().includes("chào cờ")) {
+                backgroundColor = "#f3e5f5";
+                icon = <StarIcon color="error" fontSize="small" sx={{ ml: 0.5 }} />;
+                label = "Chào cờ";
+            } else if (schedule.notes?.toLowerCase().includes("bảo quản")) {
+                backgroundColor = "#fff9c4";
+                label = "Bảo quản";
+            } else {
+                // Sự kiện đặc biệt khác
+                backgroundColor = "#ffcdd2";
+                label = schedule.notes || "Sự kiện";
+            }
+        } else if (schedule.is_exam) {
+            // Thi
+            borderStyle = "1px solid red";
+            label = `Thi ${schedule.course_code || ""}`;
+        } else if (schedule.is_practical) {
+            // Thực hành
+            backgroundColor = "#e3f2fd";
+        } else if (schedule.is_self_study) {
+            // Tự học
+            backgroundColor = "#f5f5f5";
+            borderStyle = "1px dashed #9e9e9e";
+            label = "Tự học";
+        }
+
         return (
             <Box
                 sx={{
-                    backgroundColor: schedule.is_practical ? "#e3f2fd" : "#e8f5e9",
+                    backgroundColor,
                     height: "100%",
                     width: "100%",
                     display: "flex",
@@ -204,11 +237,12 @@ const Schedule = () => {
                     fontSize: "0.8rem",
                     fontWeight: "bold",
                     p: 0.5,
-                    border: schedule.is_exam ? "1px solid red" : "none",
+                    border: borderStyle,
                 }}
+                title={label} // Thêm title để hiển thị khi hover
             >
-                {schedule.course_code || ""}
-                {schedule.is_exam && <StarIcon color="error" fontSize="small" sx={{ ml: 0.5 }} />}
+                {label}
+                {icon}
             </Box>
         );
     };
@@ -318,7 +352,7 @@ const Schedule = () => {
 
     // Hiển thị chú thích
     const legend = (
-        <Box mb={2} display="flex" gap={2} flexWrap="wrap">
+        <Box mb={2} mt={2} display="flex" gap={2} flexWrap="wrap">
             <Tooltip title="Tiết học lý thuyết">
                 <Chip label="Lý thuyết" sx={{ backgroundColor: "#e8f5e9" }} />
             </Tooltip>
@@ -331,8 +365,61 @@ const Schedule = () => {
                     <Chip label="Chào cờ" sx={{ ml: 0.5, border: "1px solid red" }} />
                 </Box>
             </Tooltip>
+            <Tooltip title="Bảo quản vật chất chiều thứ 5 hàng tuần">
+                <Chip label="Bảo quản" sx={{ backgroundColor: "#fff9c4" }} />
+            </Tooltip>
+            <Tooltip title="Sự kiện đặc biệt (Khai giảng, Quốc khánh, Ngày Nhà giáo...)">
+                <Chip label="Sự kiện đặc biệt" sx={{ backgroundColor: "#ffcdd2" }} />
+            </Tooltip>
+            <Tooltip title="Tự học">
+                <Chip label="Tự học" sx={{ backgroundColor: "#f5f5f5", border: "1px dashed #9e9e9e" }} />
+            </Tooltip>
         </Box>
     );
+
+    // Hàm định dạng ngày tháng
+    const formatDate = (dateString) => {
+        if (!dateString) return "";
+        const date = new Date(dateString);
+        return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
+    };
+
+    const getMultiDayEvents = () => {
+        // Lọc và trả về các sự kiện có duration_days > 1
+        return schedules.filter(
+            (schedule) => schedule.special_event_id && schedule.duration_days && schedule.duration_days > 1
+        );
+    };
+
+    // Thêm phần hiển thị các sự kiện kéo dài trong UI
+    const multiDayEventsSection = useMemo(() => {
+        const multiDayEvents = getMultiDayEvents();
+
+        if (multiDayEvents.length === 0) return null;
+
+        return (
+            <Box mt={3} mb={2}>
+                <Typography variant="subtitle1" gutterBottom>
+                    Sự kiện kéo dài nhiều ngày:
+                </Typography>
+                <Grid container spacing={2}>
+                    {multiDayEvents.map((event) => (
+                        <Grid item xs={12} sm={6} md={4} key={event._id}>
+                            <Paper sx={{ p: 2, bgcolor: "#ffcdd2" }}>
+                                <Typography variant="body2" fontWeight="bold">
+                                    {event.notes || "Sự kiện đặc biệt"}
+                                </Typography>
+                                <Typography variant="body2">
+                                    Từ: {formatDate(event.start_date)} - Đến: {formatDate(event.end_date)}
+                                </Typography>
+                                <Typography variant="body2">Số ngày: {event.duration_days}</Typography>
+                            </Paper>
+                        </Grid>
+                    ))}
+                </Grid>
+            </Box>
+        );
+    }, [schedules]);
 
     return (
         <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
@@ -385,6 +472,8 @@ const Schedule = () => {
             <Box sx={{ borderBottom: 1, borderColor: "divider" }}>{scheduleTabs}</Box>
 
             {legend}
+
+            {multiDayEventsSection}
 
             {loading ? (
                 <Box display="flex" justifyContent="center" my={4}>

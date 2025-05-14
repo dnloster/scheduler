@@ -26,6 +26,7 @@ import {
     Chip,
     LinearProgress,
     Divider,
+    AlertTitle,
 } from "@mui/material";
 import {
     Save as SaveIcon,
@@ -50,6 +51,7 @@ const CourseForm = () => {
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState(null);
     const [success, setSuccess] = useState(false);
+    const [hasChildCourses, setHasChildCourses] = useState(false);
 
     // Department data for dropdown
     const [departments, setDepartments] = useState([]);
@@ -118,6 +120,12 @@ const CourseForm = () => {
                     if (coursesData && coursesData.length > 0) {
                         const mainCoursesData = coursesData.filter((c) => !c.parent_course);
                         setMainCourses(mainCoursesData);
+                        if (isEditMode && id) {
+                            const childCourses = coursesData.filter(
+                                (c) => c.parent_course?._id === id || c.parent_course === id
+                            );
+                            setHasChildCourses(childCourses.length > 0);
+                        }
                     } else {
                         setMainCourses([
                             { _id: "1", code: "A10", name: "Môn A10" },
@@ -141,7 +149,7 @@ const CourseForm = () => {
         };
 
         fetchDepartmentsAndCourses();
-    }, [isEditMode]);
+    }, [isEditMode, id]);
 
     useEffect(() => {
         if (isEditMode) {
@@ -165,6 +173,17 @@ const CourseForm = () => {
                     parent_course_id: courseData.parent_course?._id || courseData.parent_course,
                     is_subcourse: !!courseData.parent_course,
                 });
+
+                try {
+                    const allCourses = await getCourses();
+                    const childCourses = allCourses.filter(
+                        (c) => c.parent_course?._id === courseData._id || c.parent_course === courseData._id
+                    );
+                    setHasChildCourses(childCourses.length > 0);
+                } catch (error) {
+                    console.error("Error fetching all courses:", error);
+                    setHasChildCourses(false);
+                }
             } else {
                 setError("Không tìm thấy môn học với ID này.");
             }
@@ -203,16 +222,19 @@ const CourseForm = () => {
             newErrors.parent_course_id = "Vui lòng chọn môn học chính";
         }
 
-        if (Number(course.theory_hours) < 0) {
-            newErrors.theory_hours = "Số tiết lý thuyết không được âm";
-        }
+        // Chỉ kiểm tra tiết học nếu không phải là môn học cha
+        if (!hasChildCourses) {
+            if (Number(course.theory_hours) < 0) {
+                newErrors.theory_hours = "Số tiết lý thuyết không được âm";
+            }
 
-        if (Number(course.practical_hours) < 0) {
-            newErrors.practical_hours = "Số tiết thực hành không được âm";
-        }
+            if (Number(course.practical_hours) < 0) {
+                newErrors.practical_hours = "Số tiết thực hành không được âm";
+            }
 
-        if (Number(course.theory_hours) + Number(course.practical_hours) <= 0) {
-            newErrors.total_hours = "Tổng số tiết phải lớn hơn 0";
+            if (Number(course.theory_hours) + Number(course.practical_hours) <= 0) {
+                newErrors.total_hours = "Tổng số tiết phải lớn hơn 0";
+            }
         }
 
         setErrors(newErrors);
@@ -273,11 +295,15 @@ const CourseForm = () => {
                 name: course.name,
                 department: course.departmentId || course.department,
                 parent_course: course.is_subcourse ? course.parent_course_id || course.parent_course : null,
-                total_hours: course.total_hours,
-                theory_hours: course.theory_hours,
-                practical_hours: course.practical_hours,
                 description: course.description,
             };
+
+            // Chỉ gửi thông tin tiết học nếu không phải là môn học cha
+            if (!hasChildCourses) {
+                courseData.total_hours = course.total_hours;
+                courseData.theory_hours = course.theory_hours;
+                courseData.practical_hours = course.practical_hours;
+            }
 
             if (isEditMode) {
                 await updateCourse(id, courseData);
@@ -598,103 +624,132 @@ const CourseForm = () => {
                                                     </Typography>
                                                 </Box>
 
-                                                <Grid container spacing={3}>
-                                                    <Grid item xs={12} md={4}>
-                                                        <TextField
-                                                            fullWidth
-                                                            label="Số tiết lý thuyết"
-                                                            name="theory_hours"
-                                                            type="number"
-                                                            value={course.theory_hours}
-                                                            onChange={handleNumberInputChange}
-                                                            error={!!errors.theory_hours}
-                                                            helperText={errors.theory_hours}
-                                                            InputProps={{
-                                                                inputProps: { min: 0 },
-                                                                endAdornment: (
-                                                                    <Box component="span" ml={1} color="text.secondary">
-                                                                        tiết
-                                                                    </Box>
-                                                                ),
-                                                            }}
-                                                            sx={{ mb: 2 }}
-                                                        />
-                                                    </Grid>
+                                                {hasChildCourses ? (
+                                                    <Alert severity="info" sx={{ mb: 2 }}>
+                                                        <AlertTitle>Thông báo</AlertTitle>
+                                                        Môn học này có các môn học con. Thời lượng sẽ được tính tự động
+                                                        từ tổng thời lượng của các môn học con.
+                                                    </Alert>
+                                                ) : (
+                                                    <>
+                                                        <Grid container spacing={3}>
+                                                            <Grid item xs={12} md={4}>
+                                                                <TextField
+                                                                    fullWidth
+                                                                    label="Số tiết lý thuyết"
+                                                                    name="theory_hours"
+                                                                    type="number"
+                                                                    value={course.theory_hours}
+                                                                    onChange={handleNumberInputChange}
+                                                                    error={!!errors.theory_hours}
+                                                                    helperText={errors.theory_hours}
+                                                                    InputProps={{
+                                                                        inputProps: { min: 0 },
+                                                                        endAdornment: (
+                                                                            <Box
+                                                                                component="span"
+                                                                                ml={1}
+                                                                                color="text.secondary"
+                                                                            >
+                                                                                tiết
+                                                                            </Box>
+                                                                        ),
+                                                                    }}
+                                                                    sx={{ mb: 2 }}
+                                                                />
+                                                            </Grid>
 
-                                                    <Grid item xs={12} md={4}>
-                                                        <TextField
-                                                            fullWidth
-                                                            label="Số tiết thực hành"
-                                                            name="practical_hours"
-                                                            type="number"
-                                                            value={course.practical_hours}
-                                                            onChange={handleNumberInputChange}
-                                                            error={!!errors.practical_hours}
-                                                            helperText={errors.practical_hours}
-                                                            InputProps={{
-                                                                inputProps: { min: 0 },
-                                                                endAdornment: (
-                                                                    <Box component="span" ml={1} color="text.secondary">
-                                                                        tiết
-                                                                    </Box>
-                                                                ),
-                                                            }}
-                                                            sx={{ mb: 2 }}
-                                                        />
-                                                    </Grid>
+                                                            <Grid item xs={12} md={4}>
+                                                                <TextField
+                                                                    fullWidth
+                                                                    label="Số tiết thực hành"
+                                                                    name="practical_hours"
+                                                                    type="number"
+                                                                    value={course.practical_hours}
+                                                                    onChange={handleNumberInputChange}
+                                                                    error={!!errors.practical_hours}
+                                                                    helperText={errors.practical_hours}
+                                                                    InputProps={{
+                                                                        inputProps: { min: 0 },
+                                                                        endAdornment: (
+                                                                            <Box
+                                                                                component="span"
+                                                                                ml={1}
+                                                                                color="text.secondary"
+                                                                            >
+                                                                                tiết
+                                                                            </Box>
+                                                                        ),
+                                                                    }}
+                                                                    sx={{ mb: 2 }}
+                                                                />
+                                                            </Grid>
 
-                                                    <Grid item xs={12} md={4}>
-                                                        <TextField
-                                                            fullWidth
-                                                            label="Tổng số tiết"
-                                                            value={course.total_hours}
-                                                            disabled
-                                                            error={!!errors.total_hours}
-                                                            helperText={errors.total_hours}
-                                                            InputProps={{
-                                                                endAdornment: (
-                                                                    <Box component="span" ml={1} color="text.secondary">
-                                                                        tiết
-                                                                    </Box>
-                                                                ),
-                                                            }}
-                                                            sx={{ mb: 2 }}
-                                                        />
-                                                    </Grid>
-                                                </Grid>
+                                                            <Grid item xs={12} md={4}>
+                                                                <TextField
+                                                                    fullWidth
+                                                                    label="Tổng số tiết"
+                                                                    value={course.total_hours}
+                                                                    disabled
+                                                                    error={!!errors.total_hours}
+                                                                    helperText={errors.total_hours}
+                                                                    InputProps={{
+                                                                        endAdornment: (
+                                                                            <Box
+                                                                                component="span"
+                                                                                ml={1}
+                                                                                color="text.secondary"
+                                                                            >
+                                                                                tiết
+                                                                            </Box>
+                                                                        ),
+                                                                    }}
+                                                                    sx={{ mb: 2 }}
+                                                                />
+                                                            </Grid>
+                                                        </Grid>
 
-                                                <Box sx={{ mt: 1 }}>
-                                                    <Box display="flex" justifyContent="space-between" mb={0.5}>
-                                                        <Typography variant="body2">Lý thuyết</Typography>
-                                                        <Typography variant="body2">Thực hành</Typography>
-                                                    </Box>
-                                                    <Box sx={{ width: "100%", display: "flex", alignItems: "center" }}>
-                                                        <Box
-                                                            sx={{
-                                                                width: `${theoryHoursRatio}%`,
-                                                                bgcolor: "primary.main",
-                                                                height: 10,
-                                                                borderRadius: "10px 0 0 10px",
-                                                            }}
-                                                        />
-                                                        <Box
-                                                            sx={{
-                                                                width: `${100 - theoryHoursRatio}%`,
-                                                                bgcolor: "success.main",
-                                                                height: 10,
-                                                                borderRadius: "0 10px 10px 0",
-                                                            }}
-                                                        />
-                                                    </Box>
-                                                    <Box display="flex" justifyContent="space-between" mt={0.5}>
-                                                        <Typography variant="caption" color="text.secondary">
-                                                            {theoryHoursRatio}% ({course.theory_hours} tiết)
-                                                        </Typography>
-                                                        <Typography variant="caption" color="text.secondary">
-                                                            {100 - theoryHoursRatio}% ({course.practical_hours} tiết)
-                                                        </Typography>
-                                                    </Box>
-                                                </Box>
+                                                        <Box sx={{ mt: 1 }}>
+                                                            <Box display="flex" justifyContent="space-between" mb={0.5}>
+                                                                <Typography variant="body2">Lý thuyết</Typography>
+                                                                <Typography variant="body2">Thực hành</Typography>
+                                                            </Box>
+                                                            <Box
+                                                                sx={{
+                                                                    width: "100%",
+                                                                    display: "flex",
+                                                                    alignItems: "center",
+                                                                }}
+                                                            >
+                                                                <Box
+                                                                    sx={{
+                                                                        width: `${theoryHoursRatio}%`,
+                                                                        bgcolor: "primary.main",
+                                                                        height: 10,
+                                                                        borderRadius: "10px 0 0 10px",
+                                                                    }}
+                                                                />
+                                                                <Box
+                                                                    sx={{
+                                                                        width: `${100 - theoryHoursRatio}%`,
+                                                                        bgcolor: "success.main",
+                                                                        height: 10,
+                                                                        borderRadius: "0 10px 10px 0",
+                                                                    }}
+                                                                />
+                                                            </Box>
+                                                            <Box display="flex" justifyContent="space-between" mt={0.5}>
+                                                                <Typography variant="caption" color="text.secondary">
+                                                                    {theoryHoursRatio}% ({course.theory_hours} tiết)
+                                                                </Typography>
+                                                                <Typography variant="caption" color="text.secondary">
+                                                                    {100 - theoryHoursRatio}% ({course.practical_hours}{" "}
+                                                                    tiết)
+                                                                </Typography>
+                                                            </Box>
+                                                        </Box>
+                                                    </>
+                                                )}
                                             </CardContent>
                                         </Card>
                                     </Grid>

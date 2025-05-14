@@ -23,6 +23,40 @@ scheduler/
 
 Bạn cần cài đặt MongoDB trên máy tính của mình. Xem hướng dẫn tại [MongoDB Installation Guide](https://docs.mongodb.com/manual/installation/).
 
+📦 Hướng Dẫn Khôi Phục Cơ Sở Dữ Liệu MongoDB
+
+Tài liệu này hướng dẫn từng bước cách **khôi phục (restore)** cơ sở dữ liệu MongoDB từ bản sao lưu (backup) có sẵn, sử dụng công cụ `mongorestore`.
+
+---
+
+### 🛠️ Bước 1. Cài Đặt Công Cụ MongoDB Database Tools
+
+Để sử dụng lệnh `mongorestore`, bạn cần cài đặt **MongoDB Database Tools** (bộ công cụ dòng lệnh của MongoDB).
+
+### 🔹 Trên Windows / macOS / Linux:
+
+1. Truy cập trang tải chính thức:  
+   https://www.mongodb.com/try/download/database-tools
+
+2. Chọn hệ điều hành phù hợp và tải về.
+
+3. Giải nén file tải về và thêm thư mục chứa các công cụ vào biến môi trường `PATH` nếu cần.
+
+4. Kiểm tra cài đặt thành công bằng lệnh:
+    ```bash
+    mongorestore --version
+    ```
+
+### 🛠️ Bước 2. Khôi Phục Cơ Sở Dữ Liệu
+
+    ```bash
+    mongorestore --uri="connectionString/ten_database" /duong_dan/backup/ten_database
+    ```
+
+connectionString/ten_database: Connection String
+
+/duong_dan/backup/ten_database: đường dẫn tới thư mục chứa dữ liệu sao lưu
+
 ### 2. Cài đặt Backend
 
 ```bash
