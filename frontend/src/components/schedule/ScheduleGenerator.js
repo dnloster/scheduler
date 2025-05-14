@@ -21,6 +21,20 @@ import { getCourses } from "../../api/courseService";
 import { generateSchedule } from "../../api/scheduleService";
 import { createEvent, getEvents } from "../../api/eventService";
 
+// Import helpers
+import {
+    getObjectId,
+    isObjectIdLike,
+    mapClassesById,
+    validateScheduleDetails,
+    findClassId,
+    findCourseId,
+} from "../../utils/objectIdHelper";
+
+// Import enhanced helpers that can handle edge cases better
+import enhancedHelper from "../../utils/enhancedObjectIdHelper";
+import payloadHelper from "../../utils/payloadHelper";
+
 // Import Step components
 import Step1Department from "./steps/Step1DepartmentTime";
 import Step2Events from "./steps/Step2SpecialEvents";
@@ -122,11 +136,14 @@ const ScheduleGenerator = () => {
                             name: course.name,
                             parent_course: course.parent_course || null,
                             totalHours: course.total_hours || 0,
+                            theory_hours: course.theory_hours || 0,
+                            practical_hours: course.practical_hours || 0,
                             groupedClasses: null,
                             maxHoursPerWeek: course.max_hours_per_week || null,
                             maxHoursPerDay: course.max_hours_per_day || null,
                             minDaysBeforeExam: course.min_days_before_exam || 0,
                             examDuration: course.exam_duration || 0,
+                            hasPracticalComponent: course.hasPracticalComponent || false,
                         };
                     });
 
@@ -261,13 +278,8 @@ const ScheduleGenerator = () => {
             // Prepare detailed class schedules
             const classesForScheduling = classes.filter((cls) => {
                 return cls.departmentId === selectedDepartment || cls.department_id === selectedDepartment;
-            });
-
-            // Xử lý thông tin lớp ghép từ courseConfigs
-            const classesMapping = {};
-            classesForScheduling.forEach((cls) => {
-                classesMapping[cls.id] = cls;
-            });
+            }); // Xử lý thông tin lớp ghép từ courseConfigs và map MongoDB IDs
+            const classesMapping = mapClassesById(classesForScheduling);
 
             // Tạo các mục lịch học chi tiết dựa trên thông tin đã cung cấp
             const scheduleDetails = [];
@@ -321,24 +333,105 @@ const ScheduleGenerator = () => {
 
                                 // Chọn time slot phù hợp theo ưu tiên
                                 for (const slot of preferredTimeSlots) {
-                                    if (remainingHours <= 0) break;
-
-                                    // Kiểm tra ràng buộc maxHoursPerDay và maxHoursPerWeek nếu có
+                                    if (remainingHours <= 0) break; // Kiểm tra ràng buộc maxHoursPerDay và maxHoursPerWeek nếu có
                                     const hoursToSchedule = Math.min(remainingHours, course.maxHoursPerDay || 4, 3);
-
                                     if (hoursToSchedule > 0) {
+                                        // Get valid MongoDB ObjectIDs using our enhanced helper functions
+                                        let validClassId = findClassId(classesMapping[classId] || classId, classes);
+
+                                        let validCourseId = findCourseId(course, courses);
+
+                                        // Additional debug logging for ID resolution
+                                        if (!validClassId) {
+                                            console.warn(
+                                                `Unable to resolve valid class_id from: ${classId}, trying additional methods...`
+                                            );
+                                            // Try using class name if available
+                                            const className = classesMapping[classId]
+                                                ? classesMapping[classId].name
+                                                : null;
+                                            if (className) {
+                                                validClassId = findClassId({ name: className }, classes);
+                                                if (validClassId) {
+                                                    console.log(
+                                                        `Successfully resolved class ID using name: ${className} -> ${validClassId}`
+                                                    );
+                                                }
+                                            }
+
+                                            // Last resort - direct search in classes array
+                                            if (!validClassId) {
+                                                for (const cls of classes) {
+                                                    if (cls.id === classId || String(cls.id) === String(classId)) {
+                                                        validClassId = findClassId(cls, classes);
+                                                        if (validClassId) {
+                                                            console.log(
+                                                                `Found class by direct ID match: ${classId} -> ${validClassId}`
+                                                            );
+                                                            break;
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+
+                                        if (!validCourseId) {
+                                            console.warn(
+                                                `Unable to resolve valid course_id from: ${JSON.stringify(
+                                                    course
+                                                )}, trying additional methods...`
+                                            );
+
+                                            // Try direct lookup by known attributes
+                                            if (course.code) {
+                                                validCourseId = findCourseId(course.code, courses);
+                                                if (validCourseId) {
+                                                    console.log(
+                                                        `Found course by code: ${course.code} -> ${validCourseId}`
+                                                    );
+                                                }
+                                            }
+
+                                            if (!validCourseId && course.name) {
+                                                validCourseId = findCourseId(course.name, courses);
+                                                if (validCourseId) {
+                                                    console.log(
+                                                        `Found course by name: ${course.name} -> ${validCourseId}`
+                                                    );
+                                                }
+                                            }
+
+                                            // Last resort - direct search in courses array
+                                            if (!validCourseId) {
+                                                for (const c of courses) {
+                                                    if (c.id === course.id || String(c.id) === String(course.id)) {
+                                                        validCourseId = findCourseId(c, courses);
+                                                        if (validCourseId) {
+                                                            console.log(
+                                                                `Found course by direct ID match: ${course.id} -> ${validCourseId}`
+                                                            );
+                                                            break;
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+
+                                        // Log IDs for debugging
+                                        console.log(`Using class_id: ${validClassId}, course_id: ${validCourseId}`);
+
                                         scheduleDetails.push({
-                                            class_id: classId,
-                                            course_id: course.id,
+                                            class_id: validClassId,
+                                            course_id: validCourseId,
                                             day_of_week: day,
                                             week_number: week,
                                             start_time: slot.start,
                                             end_time: slot.end,
-                                            is_practical: false,
+                                            is_practical: course.hasPracticalComponent || false,
                                             is_exam: false,
                                             is_self_study: false,
                                             special_event_id: null,
-                                            notes: null,
+                                            notes: `Auto-scheduled: ${course.code} - ${course.name}`,
                                         });
 
                                         remainingHours -= hoursToSchedule;
@@ -349,13 +442,11 @@ const ScheduleGenerator = () => {
                         week++;
                     }
                 });
-            });
-
-            // Prepare schedule generation parameters
+            }); // Prepare schedule generation parameters
             const scheduleParams = {
                 department_id: selectedDepartment,
-                start_time: startDate.format("YYYY-MM-DD"),
-                end_time: endDate.format("YYYY-MM-DD"),
+                start_date: startDate.format("YYYY-MM-DD"),
+                end_date: endDate.format("YYYY-MM-DD"),
                 total_weeks: totalWeeks,
                 events: eventsData.filter((event) => event.selected !== false),
                 courses: courseConfigs.map((course) => ({
@@ -375,17 +466,156 @@ const ScheduleGenerator = () => {
                     self_study_afternoon: selfStudyInAfternoon,
                 },
                 schedule_details: scheduleDetails,
-            };
+            }; // Validate the schedule details before sending            // Save reference to original details for emergency repair if needed
+            const originalDetailCount = scheduleParams.schedule_details.length;
 
-            console.log("Generating schedule with params:", scheduleParams);
+            console.log(`Pre-validation: Schedule has ${originalDetailCount} entries`);
 
-            // Call the API to generate the schedule
-            await generateSchedule(scheduleParams);
+            // Log sample of what we're sending for validation
+            if (scheduleParams.schedule_details.length > 0) {
+                console.log(
+                    "Sample schedule entry before validation:",
+                    JSON.stringify(scheduleParams.schedule_details[0])
+                );
+            }
+
+            // First try with enhanced helper with lenient mode
+            scheduleParams.schedule_details = enhancedHelper.validateScheduleDetails(
+                scheduleParams.schedule_details,
+                classes,
+                courses,
+                { lenientMode: true, debug: true }
+            );
+
+            let validatedDetailCount = scheduleParams.schedule_details.length;
+            console.log(
+                `Schedule validation: ${originalDetailCount} original entries, ${validatedDetailCount} valid entries`
+            ); // If validation resulted in zero valid entries, try emergency repair
+            if (scheduleParams.schedule_details.length === 0) {
+                console.warn("🚨 ACTIVATING EMERGENCY REPAIR MODE - All schedule details were invalid!");
+
+                // Try the repair in stages with multiple fallbacks
+
+                // Step 1: Try to repair the original schedule details if they exist
+                if (scheduleDetails && scheduleDetails.length > 0) {
+                    console.log(`Emergency repair working with ${scheduleDetails.length} original entries`);
+
+                    scheduleParams.schedule_details = enhancedHelper.emergencyRepairSchedule(
+                        scheduleDetails,
+                        classes,
+                        courses
+                    );
+                }
+                // Step 2: If we still don't have valid entries or original details were also empty
+                if (scheduleParams.schedule_details.length === 0) {
+                    console.warn("⚠️ Emergency repair couldn't fix existing entries, creating basic schedule");
+
+                    scheduleParams.schedule_details = enhancedHelper.createBasicSchedule(classes, courses, {
+                        weeks: totalWeeks,
+                    });
+                }
+
+                validatedDetailCount = scheduleParams.schedule_details.length;
+                console.log(`After emergency repair: ${validatedDetailCount} valid entries`);
+
+                // If still no valid entries, throw error
+                if (scheduleParams.schedule_details.length === 0) {
+                    throw new Error(
+                        "No valid schedule entries could be created. Please check class and course configurations."
+                    );
+                } else {
+                    console.log("Schedule saved using emergency repair mode!");
+                }
+            }
+
+            if (validatedDetailCount < originalDetailCount) {
+                console.warn(
+                    `WARNING: ${
+                        originalDetailCount - validatedDetailCount
+                    } schedule entries were removed during validation`
+                );
+            }
+
+            // Print detailed validation stats
+            console.log(
+                `Valid schedule entries: ${validatedDetailCount}/${originalDetailCount} (${Math.round(
+                    (validatedDetailCount / originalDetailCount) * 100
+                )}%)`
+            ); // Call the API to generate the schedule
+            console.log("Sending schedule parameters:", {
+                department_id: scheduleParams.department_id,
+                start_date: scheduleParams.start_date,
+                end_date: scheduleParams.end_date,
+                total_weeks: scheduleParams.total_weeks,
+                schedule_count: scheduleParams.schedule_details.length,
+            }); // Check the size of the payload to avoid "Payload Too Large" errors
+            const payloadStatus = payloadHelper.checkPayloadSize(scheduleParams);
+            console.log(`Payload size: ${payloadStatus.formattedSize}`);
+
+            // If payload is too large, we need to optimize it
+            if (payloadStatus.isLarge) {
+                console.warn(`⚠️ Payload is large (${payloadStatus.formattedSize}). Attempting to optimize...`);
+
+                // Use our payload optimizer to reduce the size
+                const originalSize = scheduleParams.schedule_details.length;
+                scheduleParams = payloadHelper.optimizeSchedulePayload(scheduleParams);
+
+                if (scheduleParams.payload_limited) {
+                    console.warn(
+                        `Payload was optimized and limited. Original: ${originalSize} entries, Optimized: ${scheduleParams.schedule_details.length} entries`
+                    );
+                    setError(
+                        `Lịch được tạo với dữ liệu rút gọn do kích thước quá lớn. Chỉ ${scheduleParams.schedule_details.length}/${originalSize} mục được gửi đi.`
+                    );
+                }
+            }
+
+            // Show sample entries for debugging
+            console.log(
+                "Sample schedule details:",
+                scheduleParams.schedule_details.slice(0, 3).map((detail) => ({
+                    class: detail.class_id,
+                    course: detail.course_id,
+                    day: detail.day_of_week,
+                    week: detail.week_number,
+                    time: `${detail.start_time}-${detail.end_time}`,
+                }))
+            );
+
+            const result = await generateSchedule(scheduleParams);
+            console.log("Schedule generation result:", result);
 
             setSuccess(true);
+
+            // Delay before redirecting to allow the user to see the success message
+            setTimeout(() => {
+                // Navigate to the schedule view page
+                navigate("/schedule");
+            }, 2000);
         } catch (error) {
             console.error("Error generating schedule:", error);
-            setError("Không thể tạo lịch học. Vui lòng thử lại sau.");
+            let errorMessage;
+
+            // Improved error handling with more specific messages
+            if (error.response) {
+                // The request was made and the server responded with a status code
+                // that falls out of the range of 2xx
+                errorMessage =
+                    error.response.data?.error ||
+                    error.response.data?.message ||
+                    `Server error: ${error.response.status}`;
+                console.error("Server error details:", error.response.data);
+            } else if (error.request) {
+                // The request was made but no response was received
+                errorMessage = "Không nhận được phản hồi từ máy chủ. Vui lòng kiểm tra kết nối.";
+                console.error("No response received:", error.request);
+            } else {
+                // Something happened in setting up the request that triggered an Error
+                errorMessage = error.message || "Lỗi không xác định";
+                console.error("Request setup error:", error.message);
+            }
+
+            setError(`Không thể tạo lịch học: ${errorMessage}`);
         } finally {
             setLoading(false);
         }

@@ -65,6 +65,61 @@ const Step3CourseConfig = ({
         });
     };
 
+    // Add function to handle hours update while maintaining consistency
+    const handleHoursUpdate = (courseId, field, value) => {
+        const course = courseConfigs.find((course) => course.id === courseId);
+
+        if (field === "totalHours") {
+            // If total hours is updated, adjust theory and practical hours proportionally
+            if (course?.hasPracticalComponent) {
+                const currentTheory = course.theory_hours || 0;
+                const currentPractical = course.practical_hours || 0;
+                const currentTotal = currentTheory + currentPractical;
+
+                if (currentTotal > 0) {
+                    // Calculate new values maintaining the same ratio
+                    const theoryRatio = currentTheory / currentTotal;
+                    const newTheory = Math.round(value * theoryRatio);
+                    const newPractical = value - newTheory;
+
+                    handleUpdateCourseConfig(courseId, "theory_hours", newTheory);
+                    handleUpdateCourseConfig(courseId, "practical_hours", newPractical);
+                } else {
+                    // If currently 0, distribute 50/50
+                    handleUpdateCourseConfig(courseId, "theory_hours", Math.ceil(value / 2));
+                    handleUpdateCourseConfig(courseId, "practical_hours", Math.floor(value / 2));
+                }
+            }
+            handleUpdateCourseConfig(courseId, field, value);
+        } else if (field === "theory_hours") {
+            // If theory hours change, adjust total and keep practical the same
+            const practical_hours = course?.practical_hours || 0;
+            handleUpdateCourseConfig(courseId, "totalHours", value + practical_hours);
+            handleUpdateCourseConfig(courseId, field, value);
+        } else if (field === "practical_hours") {
+            // If practical hours change, adjust total and keep theory the same
+            const theory_hours = course?.theory_hours || 0;
+            handleUpdateCourseConfig(courseId, "totalHours", theory_hours + value);
+            handleUpdateCourseConfig(courseId, field, value);
+        } else if (field === "hasPracticalComponent") {
+            // If toggling practical component
+            if (value) {
+                // When enabling practical component, split current total hours
+                const totalHours = course?.totalHours || 0;
+                handleUpdateCourseConfig(courseId, "theory_hours", Math.ceil(totalHours / 2));
+                handleUpdateCourseConfig(courseId, "practical_hours", Math.floor(totalHours / 2));
+            } else {
+                // When disabling practical component, set practical hours to 0
+                handleUpdateCourseConfig(courseId, "theory_hours", course?.totalHours || 0);
+                handleUpdateCourseConfig(courseId, "practical_hours", 0);
+            }
+            handleUpdateCourseConfig(courseId, field, value);
+        } else {
+            // For all other fields, update normally
+            handleUpdateCourseConfig(courseId, field, value);
+        }
+    };
+
     return (
         <Box>
             <Paper elevation={1} sx={{ p: 3, mb: 3, borderLeft: "4px solid #2196f3" }}>
@@ -192,6 +247,7 @@ const Step3CourseConfig = ({
                             const selectedCourse = courseConfigs.find(
                                 (course) => course.id === selectedCourseForConfig
                             );
+                            console.log("Selected course for config:", selectedCourse);
                             const isSpecialCourse = selectedCourse?.code === "V30" || selectedCourse?.code === "V31";
                             return (
                                 <Grid spacing={3}>
@@ -203,7 +259,7 @@ const Step3CourseConfig = ({
                                                 fullWidth
                                                 value={selectedCourse?.totalHours || 0}
                                                 onChange={(e) =>
-                                                    handleUpdateCourseConfig(
+                                                    handleHoursUpdate(
                                                         selectedCourseForConfig,
                                                         "totalHours",
                                                         parseInt(e.target.value) || 0
@@ -230,6 +286,61 @@ const Step3CourseConfig = ({
                                                 helperText="Định dạng: 'A,B|C,D|E,F' để ghép lớp A với B, C với D, E với F"
                                             />
                                         </Grid>
+
+                                        <Grid size={6}>
+                                            <FormControlLabel
+                                                control={
+                                                    <Checkbox
+                                                        checked={selectedCourse?.hasPracticalComponent || false}
+                                                        onChange={(e) =>
+                                                            handleHoursUpdate(
+                                                                selectedCourseForConfig,
+                                                                "hasPracticalComponent",
+                                                                e.target.checked
+                                                            )
+                                                        }
+                                                    />
+                                                }
+                                                label="Có thành phần thực hành"
+                                            />
+                                        </Grid>
+
+                                        {selectedCourse?.hasPracticalComponent && (
+                                            <>
+                                                <Grid size={6}>
+                                                    <TextField
+                                                        label="Số tiết lý thuyết"
+                                                        type="number"
+                                                        fullWidth
+                                                        value={selectedCourse?.theory_hours || 0}
+                                                        onChange={(e) => {
+                                                            handleHoursUpdate(
+                                                                selectedCourseForConfig,
+                                                                "theory_hours",
+                                                                parseInt(e.target.value) || 0
+                                                            );
+                                                        }}
+                                                        helperText="Số tiết dành cho phần lý thuyết (học ghép lớp)"
+                                                    />
+                                                </Grid>
+                                                <Grid size={6}>
+                                                    <TextField
+                                                        label="Số tiết thực hành"
+                                                        type="number"
+                                                        fullWidth
+                                                        value={selectedCourse?.practical_hours || 0}
+                                                        onChange={(e) =>
+                                                            handleHoursUpdate(
+                                                                selectedCourseForConfig,
+                                                                "practical_hours",
+                                                                parseInt(e.target.value) || 0
+                                                            )
+                                                        }
+                                                        helperText="Số tiết dành cho phần thực hành (học tách lớp)"
+                                                    />
+                                                </Grid>
+                                            </>
+                                        )}
                                     </Grid>
                                     <Grid sx={{ xs: 12 }}>
                                         <Divider sx={{ my: 2 }}>
@@ -495,11 +606,13 @@ const Step3CourseConfig = ({
                     <TableContainer component={Paper} variant="outlined">
                         <Table size="small">
                             <TableHead>
+                                {" "}
                                 <TableRow>
                                     <TableCell>Mã môn</TableCell>
                                     <TableCell>Tên môn học</TableCell>
                                     <TableCell align="center">Loại</TableCell>
                                     <TableCell align="center">Tổng số tiết</TableCell>
+                                    <TableCell align="center">LT/TH</TableCell>
                                     <TableCell align="center">Lớp ghép</TableCell>
                                     <TableCell align="center">Tiết/tuần</TableCell>
                                     <TableCell align="center">Tiết/ngày</TableCell>
@@ -525,80 +638,88 @@ const Step3CourseConfig = ({
                                         // Chỉ lấy môn độc lập (không phải môn con và không có môn con) hoặc môn con
                                         return isSubcourse || !hasChildren;
                                     })
-                                    .map((course) => (
-                                        <TableRow
-                                            key={course.id}
-                                            hover
-                                            selected={selectedCourseForConfig === course.id}
-                                            sx={{
-                                                "&.Mui-selected": {
-                                                    backgroundColor: "rgba(33, 150, 243, 0.12)",
-                                                },
-                                                "&.Mui-selected:hover": {
-                                                    backgroundColor: "rgba(33, 150, 243, 0.15)",
-                                                },
-                                            }}
-                                        >
-                                            <TableCell>{course.code}</TableCell>
-                                            <TableCell>
-                                                {course.parent_course && (
-                                                    <Box component="span" sx={{ mr: 1 }}>
-                                                        ↪
-                                                    </Box>
-                                                )}
-                                                {course.name}
-                                            </TableCell>
-                                            <TableCell align="center">
-                                                {course.parent_course ? (
-                                                    <Chip
-                                                        size="small"
-                                                        label="Môn con"
-                                                        color="secondary"
-                                                        variant="outlined"
-                                                    />
-                                                ) : (
-                                                    <Chip
-                                                        size="small"
-                                                        label="Độc lập"
-                                                        color="primary"
-                                                        variant="outlined"
-                                                    />
-                                                )}
-                                            </TableCell>
-                                            <TableCell align="center">{course.totalHours}</TableCell>
-                                            <TableCell align="center">
-                                                {course.groupedClasses ? (
-                                                    <Chip
-                                                        size="small"
-                                                        label={course.groupedClasses}
-                                                        color="primary"
-                                                        variant="outlined"
-                                                    />
-                                                ) : (
-                                                    <Typography variant="caption" color="text.secondary">
-                                                        -
+                                    .map((course) => {
+                                        console.log("Course for config:", course);
+                                        return (
+                                            <TableRow
+                                                key={course.id}
+                                                hover
+                                                selected={selectedCourseForConfig === course.id}
+                                                sx={{
+                                                    "&.Mui-selected": {
+                                                        backgroundColor: "rgba(33, 150, 243, 0.12)",
+                                                    },
+                                                    "&.Mui-selected:hover": {
+                                                        backgroundColor: "rgba(33, 150, 243, 0.15)",
+                                                    },
+                                                }}
+                                            >
+                                                <TableCell>{course.code}</TableCell>
+                                                <TableCell>
+                                                    {course.parent_course && (
+                                                        <Box component="span" sx={{ mr: 1 }}>
+                                                            ↪
+                                                        </Box>
+                                                    )}
+                                                    {course.name}
+                                                </TableCell>
+                                                <TableCell align="center">
+                                                    {course.parent_course ? (
+                                                        <Chip
+                                                            size="small"
+                                                            label="Môn con"
+                                                            color="secondary"
+                                                            variant="outlined"
+                                                        />
+                                                    ) : (
+                                                        <Chip
+                                                            size="small"
+                                                            label="Độc lập"
+                                                            color="primary"
+                                                            variant="outlined"
+                                                        />
+                                                    )}{" "}
+                                                </TableCell>
+                                                <TableCell align="center">{course.totalHours}</TableCell>{" "}
+                                                <TableCell align="center">
+                                                    <Typography variant="caption">
+                                                        {course.theory_hours || 0}/{course.practical_hours || 0}
                                                     </Typography>
-                                                )}
-                                            </TableCell>
-                                            <TableCell align="center">
-                                                {course.maxHoursPerWeek ? course.maxHoursPerWeek : "-"}
-                                            </TableCell>
-                                            <TableCell align="center">
-                                                {course.maxHoursPerDay ? course.maxHoursPerDay : "-"}
-                                            </TableCell>
-                                            <TableCell align="center">
-                                                <Tooltip title="Cấu hình môn học">
-                                                    <IconButton
-                                                        size="small"
-                                                        color="primary"
-                                                        onClick={() => setSelectedCourseForConfig(course.id)}
-                                                    >
-                                                        <EditIcon fontSize="small" />
-                                                    </IconButton>
-                                                </Tooltip>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
+                                                </TableCell>
+                                                <TableCell align="center">
+                                                    {course.groupedClasses ? (
+                                                        <Chip
+                                                            size="small"
+                                                            label={course.groupedClasses}
+                                                            color="primary"
+                                                            variant="outlined"
+                                                        />
+                                                    ) : (
+                                                        <Typography variant="caption" color="text.secondary">
+                                                            -
+                                                        </Typography>
+                                                    )}
+                                                </TableCell>
+                                                <TableCell align="center">
+                                                    {course.maxHoursPerWeek ? course.maxHoursPerWeek : "-"}
+                                                </TableCell>
+                                                <TableCell align="center">
+                                                    {course.maxHoursPerDay ? course.maxHoursPerDay : "-"}
+                                                </TableCell>
+                                                <TableCell align="center">
+                                                    <Tooltip title="Cấu hình môn học">
+                                                        <IconButton
+                                                            size="small"
+                                                            color="primary"
+                                                            onClick={() => setSelectedCourseForConfig(course.id)}
+                                                        >
+                                                            <EditIcon fontSize="small" />
+                                                        </IconButton>
+                                                    </Tooltip>
+                                                </TableCell>
+                                            </TableRow>
+                                        );
+                                    })}
                             </TableBody>
                         </Table>
                     </TableContainer>

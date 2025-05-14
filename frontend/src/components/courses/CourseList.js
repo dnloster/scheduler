@@ -32,7 +32,6 @@ import {
     Delete as DeleteIcon,
     Book as BookIcon,
     Bookmark as BookmarkIcon,
-    CalendarMonth as CalendarIcon,
 } from "@mui/icons-material";
 
 // Import API services
@@ -183,16 +182,14 @@ const CourseList = () => {
     // Helper function to get total hours
     const getTotalHours = (course) => {
         return course.total_hours || course.totalHours || 0;
-    };
-
-    // Helper function to get theory hours
+    }; // Helper function to get theory hours
     const getTheoryHours = (course) => {
-        return course.theory_hours || course.theoryHours || 0;
+        return course.theory_hours || 0;
     };
 
     // Helper function to get practical hours
     const getPracticalHours = (course) => {
-        return course.practical_hours || course.practicalHours || 0;
+        return course.practical_hours || 0;
     };
 
     // Get parent course name helper
@@ -327,9 +324,10 @@ const CourseList = () => {
                                                                 },
                                                             }}
                                                         />
-                                                    </Box>
+                                                    </Box>{" "}
                                                     <Typography variant="body2" color="text.secondary">
-                                                        {Math.round((theoryHours / totalHours) * 100)}%
+                                                        LT: {theoryHours} / TH: {practicalHours} (
+                                                        {Math.round((theoryHours / totalHours) * 100)}%)
                                                     </Typography>
                                                 </Box>
                                             ) : (

@@ -1,4 +1,5 @@
 import React from "react";
+import PropTypes from "prop-types";
 import {
     Box,
     Typography,
@@ -284,6 +285,22 @@ const Step5Summary = ({
             </Box>
         </Box>
     );
+};
+Step5Summary.propTypes = {
+    departments: PropTypes.array.isRequired,
+    selectedDepartment: PropTypes.string,
+    startDate: PropTypes.instanceOf(Date),
+    endDate: PropTypes.instanceOf(Date),
+    totalWeeks: PropTypes.number,
+    eventsData: PropTypes.array,
+    customEvents: PropTypes.array,
+    courseConfigs: PropTypes.array,
+    loading: PropTypes.bool,
+    success: PropTypes.bool,
+    handleGenerateSchedule: PropTypes.func.isRequired,
+    handleReset: PropTypes.func.isRequired,
+    navigate: PropTypes.func.isRequired,
+    formatDate: PropTypes.func.isRequired,
 };
 
 export default Step5Summary;

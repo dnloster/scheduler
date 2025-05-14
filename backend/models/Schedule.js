@@ -45,6 +45,10 @@ const scheduleSchema = new mongoose.Schema({
         default: null,
     },
     notes: String,
+    actual_date: {
+        type: Date,
+        default: null,
+    },
     created_at: {
         type: Date,
         default: Date.now,

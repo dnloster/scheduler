@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { Link } from "react-router-dom";
 import {
     Container,
@@ -24,10 +24,14 @@ import {
     CircularProgress,
     Alert,
 } from "@mui/material";
-import { Add as AddIcon, Print as PrintIcon, Star as StarIcon } from "@mui/icons-material";
+import { Add as AddIcon, Print as PrintIcon, Star as StarIcon, Event as EventIcon } from "@mui/icons-material";
 import { getSchedules } from "../../api/scheduleService";
 import { getDepartments } from "../../api/departmentService";
 import { getClassesByDepartmentId } from "../../api/classService";
+import { formatDate, isHoliday } from "../../utils/scheduleDisplayUtils";
+
+// Số tuần hiển thị cùng lúc
+const WEEKS_TO_SHOW = 5;
 
 const Schedule = () => {
     const [schedules, setSchedules] = useState([]);
@@ -38,12 +42,8 @@ const Schedule = () => {
     const [classes, setClasses] = useState([]);
     const [startWeek, setStartWeek] = useState(1);
     const [tabValue, setTabValue] = useState(0);
-
-    // Số tuần hiển thị cùng lúc
-    const weeksToShow = 5;
-
-    // Số tiết trong một ngày
-    const periodsPerDay = 9;
+    const [startDate, setStartDate] = useState(null);
+    const [endDate, setEndDate] = useState(null);
 
     // Tải dữ liệu ban đầu
     useEffect(() => {
@@ -63,6 +63,18 @@ const Schedule = () => {
                 // Tải lịch học
                 const schedulesResponse = await getSchedules();
                 setSchedules(schedulesResponse || []);
+
+                // Xác định ngày bắt đầu và kết thúc từ dữ liệu lịch học
+                if (schedulesResponse && schedulesResponse.length > 0) {
+                    const dates = schedulesResponse.filter((s) => s.actual_date).map((s) => new Date(s.actual_date));
+
+                    if (dates.length > 0) {
+                        const minDate = new Date(Math.min(...dates));
+                        const maxDate = new Date(Math.max(...dates));
+                        setStartDate(minDate);
+                        setEndDate(maxDate);
+                    }
+                }
             } catch (error) {
                 console.error("Lỗi khi tải dữ liệu ban đầu:", error);
                 setError("Không thể tải dữ liệu. Vui lòng thử lại sau.");
@@ -74,25 +86,43 @@ const Schedule = () => {
         fetchInitialData();
     }, []);
 
-    // Tải danh sách lớp khi thay đổi khoa
+    // Tải danh sách lớp và lịch học khi thay đổi khoa
     useEffect(() => {
-        const fetchClasses = async () => {
+        const fetchData = async () => {
             if (!selectedDepartment) return;
 
             setLoading(true);
             setError(null);
             try {
+                // Tải danh sách lớp
                 const classesResponse = await getClassesByDepartmentId(selectedDepartment);
                 setClasses(classesResponse || []);
+
+                // Tải lịch học cho khoa đã chọn
+                const params = { department_id: selectedDepartment };
+                const schedulesResponse = await getSchedules(params);
+                setSchedules(schedulesResponse || []);
+
+                // Cập nhật ngày bắt đầu và kết thúc
+                if (schedulesResponse && schedulesResponse.length > 0) {
+                    const dates = schedulesResponse.filter((s) => s.actual_date).map((s) => new Date(s.actual_date));
+
+                    if (dates.length > 0) {
+                        const minDate = new Date(Math.min(...dates));
+                        const maxDate = new Date(Math.max(...dates));
+                        setStartDate(minDate);
+                        setEndDate(maxDate);
+                    }
+                }
             } catch (error) {
-                console.error("Lỗi khi tải danh sách lớp:", error);
-                setError("Không thể tải danh sách lớp. Vui lòng thử lại sau.");
+                console.error("Lỗi khi tải dữ liệu:", error);
+                setError("Không thể tải dữ liệu. Vui lòng thử lại sau.");
             } finally {
                 setLoading(false);
             }
         };
 
-        fetchClasses();
+        fetchData();
     }, [selectedDepartment]);
 
     // Xử lý thay đổi khoa
@@ -103,21 +133,21 @@ const Schedule = () => {
     // Xử lý thay đổi tab
     const handleTabChange = (event, newValue) => {
         setTabValue(newValue);
-        // Mỗi tab hiển thị 5 tuần, nên tính tuần bắt đầu dựa vào tab được chọn
-        setStartWeek(newValue * weeksToShow + 1);
+        // Mỗi tab hiển thị WEEKS_TO_SHOW tuần, nên tính tuần bắt đầu dựa vào tab được chọn
+        setStartWeek(newValue * WEEKS_TO_SHOW + 1);
     };
 
     // Tạo các tabs cho tuần học
     const scheduleTabs = useMemo(() => {
         // Giả sử có tổng cộng 50 tuần
         const totalWeeks = 50;
-        const tabCount = Math.ceil(totalWeeks / weeksToShow);
+        const tabCount = Math.ceil(totalWeeks / WEEKS_TO_SHOW);
 
         return (
             <Tabs value={tabValue} onChange={handleTabChange} variant="scrollable" scrollButtons="auto" sx={{ mb: 2 }}>
                 {Array.from({ length: tabCount }).map((_, index) => {
-                    const start = index * weeksToShow + 1;
-                    const end = Math.min((index + 1) * weeksToShow, totalWeeks);
+                    const start = index * WEEKS_TO_SHOW + 1;
+                    const end = Math.min((index + 1) * WEEKS_TO_SHOW, totalWeeks);
                     return <Tab key={index} label={`Tuần ${start}-${end}`} />;
                 })}
             </Tabs>
@@ -127,7 +157,7 @@ const Schedule = () => {
     // Tính toán các tuần hiển thị
     const displayWeeks = useMemo(() => {
         const weeks = [];
-        for (let i = 0; i < weeksToShow; i++) {
+        for (let i = 0; i < WEEKS_TO_SHOW; i++) {
             const weekNumber = startWeek + i;
             if (weekNumber <= 50) {
                 // Giả sử tối đa 50 tuần
@@ -137,16 +167,30 @@ const Schedule = () => {
         return weeks;
     }, [startWeek]);
 
-    // Tìm thông tin lịch học cho một lớp, tiết và tuần cụ thể
-    const getScheduleForClassPeriodWeek = (classId, period, weekNumber, dayOfWeek) => {
-        return schedules.find(
-            (schedule) =>
-                schedule.class_id === classId &&
-                schedule.week_number === weekNumber &&
-                schedule.day_of_week === dayOfWeek &&
-                isPeriodInTimeRange(period, schedule.start_time, schedule.end_time)
-        );
-    };
+    // Tìm thông tin lịch học cho một lớp, tiết và ngày cụ thể
+    const getScheduleForClassPeriodDay = useCallback(
+        (classId, period, date) => {
+            return schedules.find((schedule) => {
+                // Kiểm tra xem ngày của lịch học có khớp với ngày đã cho không
+                if (!schedule.actual_date) return false;
+
+                const scheduleDate = new Date(schedule.actual_date);
+                const compareDate = new Date(date);
+
+                const sameDay =
+                    scheduleDate.getDate() === compareDate.getDate() &&
+                    scheduleDate.getMonth() === compareDate.getMonth() &&
+                    scheduleDate.getFullYear() === compareDate.getFullYear();
+
+                return (
+                    schedule.class === classId &&
+                    sameDay &&
+                    isPeriodInTimeRange(period, schedule.start_time, schedule.end_time)
+                );
+            });
+        },
+        [schedules]
+    );
 
     // Kiểm tra xem tiết học có nằm trong khoảng thời gian không
     const isPeriodInTimeRange = (period, startTime, endTime) => {
@@ -184,68 +228,81 @@ const Schedule = () => {
     };
 
     // Render một ô lịch học
-    const renderScheduleCell = (classId, period, weekNumber, dayOfWeek) => {
-        const schedule = getScheduleForClassPeriodWeek(classId, period, weekNumber, dayOfWeek);
+    const renderScheduleCell = useCallback(
+        (classId, period, date) => {
+            const schedule = getScheduleForClassPeriodDay(classId, period, date);
 
-        if (!schedule) {
-            return null;
-        }
-
-        // Xác định loại sự kiện/lịch học để hiển thị phù hợp
-        let backgroundColor = "#e8f5e9"; // Mặc định là lý thuyết
-        let borderStyle = "none";
-        let label = schedule.course_code || "";
-        let icon = null;
-
-        if (schedule.special_event_id) {
-            // Đây là sự kiện đặc biệt
-            if (schedule.notes?.toLowerCase().includes("chào cờ")) {
-                backgroundColor = "#f3e5f5";
-                icon = <StarIcon color="error" fontSize="small" sx={{ ml: 0.5 }} />;
-                label = "Chào cờ";
-            } else if (schedule.notes?.toLowerCase().includes("bảo quản")) {
-                backgroundColor = "#fff9c4";
-                label = "Bảo quản";
-            } else {
-                // Sự kiện đặc biệt khác
-                backgroundColor = "#ffcdd2";
-                label = schedule.notes || "Sự kiện";
+            if (!schedule) {
+                return null;
             }
-        } else if (schedule.is_exam) {
-            // Thi
-            borderStyle = "1px solid red";
-            label = `Thi ${schedule.course_code || ""}`;
-        } else if (schedule.is_practical) {
-            // Thực hành
-            backgroundColor = "#e3f2fd";
-        } else if (schedule.is_self_study) {
-            // Tự học
-            backgroundColor = "#f5f5f5";
-            borderStyle = "1px dashed #9e9e9e";
-            label = "Tự học";
+
+            // Kiểm tra xem đây có phải là ngày lễ/sự kiện đặc biệt không
+            const isSpecialEvent = !!schedule.special_event;
+            const isSelfStudy = schedule.is_self_study;
+
+            // Xác định màu sắc ô dựa vào loại lịch học
+            let bgColor = "#ffffff"; // Mặc định
+
+            if (isSpecialEvent) {
+                bgColor = "#ffebee"; // Hồng nhạt cho sự kiện đặc biệt
+            } else if (isSelfStudy) {
+                bgColor = "#fff9c4"; // Vàng nhạt cho tiết tự học
+            } else if (schedule.is_practical) {
+                bgColor = "#e3f2fd"; // Xanh nhạt cho thực hành
+            } else {
+                bgColor = "#e8f5e9"; // Xanh lá nhạt cho lý thuyết
+            }
+
+            // Hiển thị mã môn học
+            return (
+                <Box
+                    sx={{
+                        backgroundColor: bgColor,
+                        height: "100%",
+                        width: "100%",
+                        display: "flex",
+                        justifyContent: "center",
+                        alignItems: "center",
+                        fontSize: "0.8rem",
+                        fontWeight: "bold",
+                        p: 0.5,
+                        border: schedule.is_exam ? "1px solid red" : "none",
+                    }}
+                >
+                    {schedule.course_code || ""}
+                    {schedule.is_exam && <StarIcon color="error" fontSize="small" sx={{ ml: 0.5 }} />}
+                    {isSpecialEvent && <EventIcon color="secondary" fontSize="small" sx={{ ml: 0.5 }} />}
+                </Box>
+            );
+        },
+        [getScheduleForClassPeriodDay]
+    ); // Tính ngày từ tuần được hiển thị
+    const calculateDatesForWeeks = useCallback(() => {
+        if (!startDate) return [];
+
+        const result = [];
+
+        for (const week of displayWeeks) {
+            // Tính ngày bắt đầu của tuần
+            const weekStart = new Date(startDate);
+            weekStart.setDate(weekStart.getDate() + (week - 1) * 7);
+
+            // Thêm 5 ngày trong tuần (thứ 2 đến thứ 6)
+            const weekDays = [];
+            for (let i = 0; i < 5; i++) {
+                const day = new Date(weekStart);
+                day.setDate(weekStart.getDate() + i);
+                weekDays.push(day);
+            }
+
+            result.push({ weekNumber: week, days: weekDays });
         }
 
-        return (
-            <Box
-                sx={{
-                    backgroundColor,
-                    height: "100%",
-                    width: "100%",
-                    display: "flex",
-                    justifyContent: "center",
-                    alignItems: "center",
-                    fontSize: "0.8rem",
-                    fontWeight: "bold",
-                    p: 0.5,
-                    border: borderStyle,
-                }}
-                title={label} // Thêm title để hiển thị khi hover
-            >
-                {label}
-                {icon}
-            </Box>
-        );
-    };
+        return result;
+    }, [displayWeeks, startDate]);
+
+    // Các tuần và ngày đã tính toán
+    const weeksWithDates = useMemo(() => calculateDatesForWeeks(), [calculateDatesForWeeks]);
 
     // Tạo bảng lịch học theo định dạng trong ảnh
     const customScheduleTable = useMemo(() => {
@@ -269,32 +326,27 @@ const Schedule = () => {
                                 Tiết
                             </TableCell>
 
-                            {displayWeeks.map((week) => (
-                                <TableCell key={week} colSpan={5} align="center">
-                                    Tuần {week}
+                            {weeksWithDates.map((week) => (
+                                <TableCell key={week.weekNumber} colSpan={5} align="center">
+                                    Tuần {week.weekNumber}
                                 </TableCell>
                             ))}
-                        </TableRow>
+                        </TableRow>{" "}
                         <TableRow>
-                            {displayWeeks.map((week) =>
-                                // 5 ngày trong tuần (Thứ 2 - Thứ 6)
-                                Array.from({ length: 5 }).map((_, dayIndex) => {
-                                    // Tính toán ngày tháng dựa vào tuần
-                                    // Giả sử ngày bắt đầu năm học là 1/9/2023 (có thể điều chỉnh)
-                                    const startDate = new Date(2023, 8, 1); // Tháng bắt đầu từ 0
-                                    const dayOfWeek = dayIndex + 1; // 0: Thứ 2, 1: Thứ 3, ..., 4: Thứ 6
-
-                                    // Tính số ngày cần cộng thêm: (tuần - 1) * 7 + dayOfWeek
-                                    const daysToAdd = (week - 1) * 7 + dayOfWeek;
-                                    const currentDate = new Date(startDate);
-                                    currentDate.setDate(startDate.getDate() + daysToAdd);
-
-                                    const day = currentDate.getDate();
-                                    const month = currentDate.getMonth() + 1;
+                            {weeksWithDates.map((week) =>
+                                week.days.map((date, dayIndex) => {
+                                    const isHolidayDate = isHoliday(date);
 
                                     return (
-                                        <TableCell key={`${week}-${dayIndex + 2}`} align="center" sx={{ minWidth: 60 }}>
-                                            {day}/{month}
+                                        <TableCell
+                                            key={`${week.weekNumber}-day-${dayIndex}`}
+                                            align="center"
+                                            sx={{
+                                                minWidth: 60,
+                                                backgroundColor: isHolidayDate ? "#ffebee" : "inherit",
+                                            }}
+                                        >
+                                            {formatDate(date)}
                                         </TableCell>
                                     );
                                 })
@@ -324,22 +376,18 @@ const Schedule = () => {
                                     <TableCell align="center" sx={{ fontWeight: "bold", backgroundColor: "#f5f5f5" }}>
                                         {periodGroup.label}
                                     </TableCell>
-                                    {displayWeeks.map((week) =>
-                                        // 5 ngày trong tuần (Thứ 2 - Thứ 6)
-                                        Array.from({ length: 5 }).map((_, dayIndex) => {
-                                            const dayOfWeek = dayIndex + 2; // Thứ 2 = 2, ..., Thứ 6 = 6
-                                            return (
-                                                <TableCell
-                                                    key={`${cls._id}-${week}-${dayOfWeek}-${periodGroup.label}`}
-                                                    align="center"
-                                                    padding="none"
-                                                    sx={{ height: 40 }}
-                                                >
-                                                    {/* Hiển thị lịch cho tiết đầu tiên trong nhóm tiết */}
-                                                    {renderScheduleCell(cls._id, periodGroup.start, week, dayOfWeek)}
-                                                </TableCell>
-                                            );
-                                        })
+
+                                    {weeksWithDates.map((week) =>
+                                        week.days.map((date, dayIndex) => (
+                                            <TableCell
+                                                key={`${cls._id}-${week.weekNumber}-${dayIndex}-${periodGroup.label}`}
+                                                align="center"
+                                                padding="none"
+                                                sx={{ height: 40 }}
+                                            >
+                                                {renderScheduleCell(cls._id, periodGroup.start, date)}
+                                            </TableCell>
+                                        ))
                                     )}
                                 </TableRow>
                             ))
@@ -348,78 +396,34 @@ const Schedule = () => {
                 </Table>
             </TableContainer>
         );
-    }, [classes, displayWeeks, schedules]);
+    }, [classes, renderScheduleCell, weeksWithDates]);
 
     // Hiển thị chú thích
     const legend = (
-        <Box mb={2} mt={2} display="flex" gap={2} flexWrap="wrap">
+        <Box mb={2} display="flex" gap={2} flexWrap="wrap">
             <Tooltip title="Tiết học lý thuyết">
                 <Chip label="Lý thuyết" sx={{ backgroundColor: "#e8f5e9" }} />
             </Tooltip>
             <Tooltip title="Tiết học thực hành">
                 <Chip label="Thực hành" sx={{ backgroundColor: "#e3f2fd" }} />
             </Tooltip>
-            <Tooltip title="Chào cờ buổi sáng thứ 2 đầu tháng">
+            <Tooltip title="Tiết tự học">
+                <Chip label="Tự học" sx={{ backgroundColor: "#fff9c4" }} />
+            </Tooltip>
+            <Tooltip title="Sự kiện đặc biệt/ngày nghỉ lễ">
                 <Box display="flex" alignItems="center">
-                    <StarIcon color="error" fontSize="small" />
-                    <Chip label="Chào cờ" sx={{ ml: 0.5, border: "1px solid red" }} />
+                    <EventIcon color="secondary" fontSize="small" />
+                    <Chip label="Sự kiện đặc biệt" sx={{ ml: 0.5, backgroundColor: "#ffebee" }} />
                 </Box>
             </Tooltip>
-            <Tooltip title="Bảo quản vật chất chiều thứ 5 hàng tuần">
-                <Chip label="Bảo quản" sx={{ backgroundColor: "#fff9c4" }} />
-            </Tooltip>
-            <Tooltip title="Sự kiện đặc biệt (Khai giảng, Quốc khánh, Ngày Nhà giáo...)">
-                <Chip label="Sự kiện đặc biệt" sx={{ backgroundColor: "#ffcdd2" }} />
-            </Tooltip>
-            <Tooltip title="Tự học">
-                <Chip label="Tự học" sx={{ backgroundColor: "#f5f5f5", border: "1px dashed #9e9e9e" }} />
+            <Tooltip title="Kiểm tra/thi">
+                <Box display="flex" alignItems="center">
+                    <StarIcon color="error" fontSize="small" />
+                    <Chip label="Kiểm tra/thi" sx={{ ml: 0.5, border: "1px solid red" }} />
+                </Box>
             </Tooltip>
         </Box>
     );
-
-    // Hàm định dạng ngày tháng
-    const formatDate = (dateString) => {
-        if (!dateString) return "";
-        const date = new Date(dateString);
-        return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
-    };
-
-    const getMultiDayEvents = () => {
-        // Lọc và trả về các sự kiện có duration_days > 1
-        return schedules.filter(
-            (schedule) => schedule.special_event_id && schedule.duration_days && schedule.duration_days > 1
-        );
-    };
-
-    // Thêm phần hiển thị các sự kiện kéo dài trong UI
-    const multiDayEventsSection = useMemo(() => {
-        const multiDayEvents = getMultiDayEvents();
-
-        if (multiDayEvents.length === 0) return null;
-
-        return (
-            <Box mt={3} mb={2}>
-                <Typography variant="subtitle1" gutterBottom>
-                    Sự kiện kéo dài nhiều ngày:
-                </Typography>
-                <Grid container spacing={2}>
-                    {multiDayEvents.map((event) => (
-                        <Grid item xs={12} sm={6} md={4} key={event._id}>
-                            <Paper sx={{ p: 2, bgcolor: "#ffcdd2" }}>
-                                <Typography variant="body2" fontWeight="bold">
-                                    {event.notes || "Sự kiện đặc biệt"}
-                                </Typography>
-                                <Typography variant="body2">
-                                    Từ: {formatDate(event.start_date)} - Đến: {formatDate(event.end_date)}
-                                </Typography>
-                                <Typography variant="body2">Số ngày: {event.duration_days}</Typography>
-                            </Paper>
-                        </Grid>
-                    ))}
-                </Grid>
-            </Box>
-        );
-    }, [schedules]);
 
     return (
         <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
@@ -466,14 +470,22 @@ const Schedule = () => {
                         </Select>
                     </FormControl>
                 </Grid>
+
+                {startDate && endDate && (
+                    <Grid item xs={12} md={8}>
+                        <Box display="flex" justifyContent="flex-end" alignItems="center">
+                            <Typography variant="body2" color="textSecondary">
+                                Khoảng thời gian: {formatDate(startDate)} - {formatDate(endDate)}
+                            </Typography>
+                        </Box>
+                    </Grid>
+                )}
             </Grid>
 
             {/* Tabs để chọn nhóm tuần */}
             <Box sx={{ borderBottom: 1, borderColor: "divider" }}>{scheduleTabs}</Box>
 
             {legend}
-
-            {multiDayEventsSection}
 
             {loading ? (
                 <Box display="flex" justifyContent="center" my={4}>
