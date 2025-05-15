@@ -281,30 +281,30 @@ async function generateDepartmentSchedule(departmentId, startDate, endDate, tota
         // TODO: Tính toán tuần và ngày thực tế cho mỗi sự kiện dựa trên startDate
         // Hiện tại chỉ là placeholder cho thuật toán xếp lịch thực tế        // Xếp lịch cho các môn học dựa trên ràng buộc
         // ... (phần triển khai sẽ phụ thuộc vào thuật toán xếp lịch cụ thể)
-        
+
         // Chuẩn bị cấu hình kỳ thi từ các ràng buộc
-        const constraints = await CourseConstraint.find({ course: { $in: courses.map(c => c._id) } });
+        const constraints = await CourseConstraint.find({ course: { $in: courses.map((c) => c._id) } });
         const courseExams = constraints
-            .filter(constraint => constraint.min_days_before_exam && constraint.exam_duration_hours)
-            .map(constraint => ({
+            .filter((constraint) => constraint.min_days_before_exam && constraint.exam_duration_hours)
+            .map((constraint) => ({
                 id: constraint.course.toString(),
                 minDaysBeforeExam: constraint.min_days_before_exam,
                 examDuration: constraint.exam_duration_hours,
-                examPhases: constraint.exam_phases || 1
+                examPhases: constraint.exam_phases || 1,
             }));
 
         console.log(`Found ${courseExams.length} courses with exam configurations`);
-        
+
         // Lấy danh sách lịch học đã tạo
-        const existingSchedules = await Schedule.find({ 
-            class: { $in: classes.map(c => c._id) },
-            is_exam: { $ne: true } // Chỉ lấy lịch học thường, không phải lịch thi
+        const existingSchedules = await Schedule.find({
+            class: { $in: classes.map((c) => c._id) },
+            is_exam: { $ne: true }, // Chỉ lấy lịch học thường, không phải lịch thi
         });
-        
+
         // Áp dụng ràng buộc thi
-        const constraintProcessor = require('./constraint-processor');
+        const constraintProcessor = require("./constraint-processor");
         const updatedSchedules = await constraintProcessor.applyExamConstraints(existingSchedules, courseExams);
-        
+
         // Lưu các lịch thi mới
         for (const schedule of updatedSchedules) {
             if (schedule.is_exam && !schedule._id) {
@@ -318,10 +318,12 @@ async function generateDepartmentSchedule(departmentId, startDate, endDate, tota
                     is_exam: true,
                     notes: schedule.notes,
                     exam_phase: schedule.exam_phase,
-                    total_phases: schedule.total_phases
+                    total_phases: schedule.total_phases,
                 });
                 await newExamSchedule.save();
-                console.log(`Created exam schedule for course ${schedule.course_id}, phase ${schedule.exam_phase || 1}`);
+                console.log(
+                    `Created exam schedule for course ${schedule.course_id}, phase ${schedule.exam_phase || 1}`
+                );
             }
         }
 

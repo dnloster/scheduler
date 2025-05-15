@@ -43,18 +43,19 @@ const scheduleSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "SpecialEvent",
         default: null,
-    },    notes: String,
+    },
+    notes: String,
     actual_date: {
         type: Date,
         default: null,
     },
     exam_phase: {
         type: Number,
-        default: 1
+        default: 1,
     },
     total_phases: {
         type: Number,
-        default: 1
+        default: 1,
     },
     created_at: {
         type: Date,

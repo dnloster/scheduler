@@ -3,6 +3,7 @@
 ## Tóm tắt kết quả
 
 ✅ **Đã sửa thành công 3 vấn đề chính**:
+
 1. Lịch thi V30/V31 đã được cập nhật với 5 giai đoạn
 2. Ngày khai giảng đã được sửa từ 15/6 thành 15-16/9
 3. Hiển thị giai đoạn thi đã được cải thiện trên UI
@@ -12,57 +13,65 @@
 ### 1. Lịch thi V30/V31 (5 giai đoạn)
 
 Đã tạo thành công 10 lịch thi:
-- 5 lịch thi cho V30
-- 5 lịch thi cho V31
+
+-   5 lịch thi cho V30
+-   5 lịch thi cho V31
 
 Mỗi khóa học có đủ 5 giai đoạn thi (1-5) với khoảng cách 2 ngày giữa các giai đoạn.
 
 **Lịch thi V30:**
-- Giai đoạn 1/5: Tuần 16, Ngày 5
-- Giai đoạn 2/5: Tuần 17, Ngày 2
-- Giai đoạn 3/5: Tuần 17, Ngày 4
-- Giai đoạn 4/5: Tuần 18, Ngày 1
-- Giai đoạn 5/5: Tuần 18, Ngày 3
+
+-   Giai đoạn 1/5: Tuần 16, Ngày 5
+-   Giai đoạn 2/5: Tuần 17, Ngày 2
+-   Giai đoạn 3/5: Tuần 17, Ngày 4
+-   Giai đoạn 4/5: Tuần 18, Ngày 1
+-   Giai đoạn 5/5: Tuần 18, Ngày 3
 
 **Lịch thi V31:**
-- Giai đoạn 1/5: Tuần 17, Ngày 2
-- Giai đoạn 2/5: Tuần 17, Ngày 4
-- Giai đoạn 3/5: Tuần 18, Ngày 1
-- Giai đoạn 4/5: Tuần 18, Ngày 3
-- Giai đoạn 5/5: Tuần 18, Ngày 5
+
+-   Giai đoạn 1/5: Tuần 17, Ngày 2
+-   Giai đoạn 2/5: Tuần 17, Ngày 4
+-   Giai đoạn 3/5: Tuần 18, Ngày 1
+-   Giai đoạn 4/5: Tuần 18, Ngày 3
+-   Giai đoạn 5/5: Tuần 18, Ngày 5
 
 ### 2. Ngày khai giảng (15-16/9)
 
 Đã xác nhận 30 lịch khai giảng có ngày đúng:
-- Ngày: 15/9/2025
-- Tuần: 15
-- Thời lượng: 2 ngày (bao gồm cả 16/9)
+
+-   Ngày: 15/9/2025
+-   Tuần: 15
+-   Thời lượng: 2 ngày (bao gồm cả 16/9)
 
 ### 3. Hiển thị giai đoạn thi
 
 Giao diện đã được cập nhật để hiển thị:
-- Số giai đoạn thi hiện tại / tổng số giai đoạn (VD: 1/5, 2/5)
-- Tooltip hiển thị thông tin chi tiết khi di chuột qua
-- Viền đỏ và biểu tượng sao cho mỗi lịch thi
+
+-   Số giai đoạn thi hiện tại / tổng số giai đoạn (VD: 1/5, 2/5)
+-   Tooltip hiển thị thông tin chi tiết khi di chuột qua
+-   Viền đỏ và biểu tượng sao cho mỗi lịch thi
 
 ## Các file đã được cập nhật
 
 1. **Models**:
-   - `CourseConstraint.js`: Thêm trường exam_phases
-   - `Schedule.js`: Thêm trường exam_phase và total_phases
+
+    - `CourseConstraint.js`: Thêm trường exam_phases
+    - `Schedule.js`: Thêm trường exam_phase và total_phases
 
 2. **Logic**:
-   - `constraint-processor.js`: Cập nhật hàm applyExamConstraints
-   - `seed.js`: Sửa ngày khai giảng
+
+    - `constraint-processor.js`: Cập nhật hàm applyExamConstraints
+    - `seed.js`: Sửa ngày khai giảng
 
 3. **UI**:
-   - `Schedule.js` (frontend): Cập nhật hiển thị giai đoạn thi
+
+    - `Schedule.js` (frontend): Cập nhật hiển thị giai đoạn thi
 
 4. **Scripts**:
-   - `create-exam-schedules.js`: Tạo mới - tạo lịch thi V30/V31 với 5 giai đoạn
-   - `check-exam-schedules.js`: Tạo mới - kiểm tra lịch thi và ngày khai giảng
-   - `normalize-schedule-ids.js`: Tạo mới - chuẩn hóa ID lịch
-   - `apply-exam-fixes.sh`: Tạo mới - chạy tất cả các script theo trình tự
+    - `create-exam-schedules.js`: Tạo mới - tạo lịch thi V30/V31 với 5 giai đoạn
+    - `check-exam-schedules.js`: Tạo mới - kiểm tra lịch thi và ngày khai giảng
+    - `normalize-schedule-ids.js`: Tạo mới - chuẩn hóa ID lịch
+    - `apply-exam-fixes.sh`: Tạo mới - chạy tất cả các script theo trình tự
 
 ## Khuyến nghị
 
@@ -78,6 +87,6 @@ Giao diện đã được cập nhật để hiển thị:
 
 ## Xác nhận của người triển khai
 
-- Người thực hiện: 
-- Ngày triển khai:
-- Phê duyệt bởi:
+-   Người thực hiện:
+-   Ngày triển khai:
+-   Phê duyệt bởi:

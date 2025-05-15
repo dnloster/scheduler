@@ -359,7 +359,9 @@ const Schedule = () => {
                     {isFlagCeremony ? (
                         <StarIcon color="error" fontSize="small" />
                     ) : (
-                        <>                            {isSelfStudy ? "Ôn" : schedule.course_code || ""}
+                        <>
+                            {" "}
+                            {isSelfStudy ? "Ôn" : schedule.course_code || ""}
                             {schedule.is_exam && (
                                 <Tooltip title={schedule.notes || "Thi"}>
                                     <div style={{ display: "flex", alignItems: "center" }}>

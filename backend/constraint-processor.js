@@ -337,36 +337,36 @@ function applyExamConstraints(scheduleDetails, courseExams = []) {
         if (!lastClassDayMap.has(courseId) || compareWeekDays(weekDay, lastClassDayMap.get(courseId)) > 0) {
             lastClassDayMap.set(courseId, weekDay);
         }
-    });    // Sau đó, lên lịch các kỳ thi dựa trên cấu hình
+    }); // Sau đó, lên lịch các kỳ thi dựa trên cấu hình
     lastClassDayMap.forEach((lastDay, courseId) => {
         const examConfig = examConfigMap.get(courseId);
         if (!examConfig) return;
 
         // Tách week-day
         const [lastWeek, lastDayOfWeek] = lastDay.split("-").map(Number);
-        
+
         // Xác định số giai đoạn thi
         const phases = examConfig.phases || 1;
-        
+
         // Tính thời gian giữa các giai đoạn thi
         const phasesGapDays = 2; // Số ngày giữa các giai đoạn thi
-        
+
         for (let phase = 1; phase <= phases; phase++) {
             // Tính ngày thi với khoảng cách phù hợp
             // Giai đoạn đầu tiên: X ngày sau buổi học cuối
             // Các giai đoạn tiếp theo: thêm khoảng cách giữa các giai đoạn
             const phaseDelay = (phase - 1) * phasesGapDays;
-            
+
             let examWeek = lastWeek;
             let examDay = lastDayOfWeek + examConfig.minDays + phaseDelay;
-    
+
             // Điều chỉnh nếu vượt qua cuối tuần
             while (examDay > 5) {
                 // Giả sử tuần học từ ngày 1-5 (thứ 2 đến thứ 6)
                 examDay -= 5;
                 examWeek += 1;
             }
-    
+
             // Tạo slot thi mới
             examSchedules.push({
                 course_id: courseId,
@@ -379,7 +379,7 @@ function applyExamConstraints(scheduleDetails, courseExams = []) {
                 is_self_study: false,
                 notes: phases > 1 ? `Thi giai đoạn ${phase}/${phases}` : "Kỳ thi",
                 exam_phase: phase,
-                total_phases: phases
+                total_phases: phases,
             });
         }
     });
