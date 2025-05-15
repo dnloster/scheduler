@@ -23,10 +23,13 @@ const courseConstraintSchema = new mongoose.Schema({
     min_days_before_exam: {
         type: Number,
         default: 0,
-    },
-    exam_duration_hours: {
+    },    exam_duration_hours: {
         type: Number,
         default: 0,
+    },
+    exam_phases: {
+        type: Number,
+        default: 1,
     },
     grouped_classes: String, // Format: "1,2|3,4|5,6" for groups A-B, C-D, E-F
     notes: String,

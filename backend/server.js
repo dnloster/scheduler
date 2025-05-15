@@ -723,15 +723,14 @@ app.post("/api/schedule/generate", async (req, res) => {
                     }
                 }
 
-                console.log(`Found ${practicalCourses.length} practical courses`);
-
-                // Áp dụng tất cả các ràng buộc (sự kiện đặc biệt, thời gian, v.v.)
+                console.log(`Found ${practicalCourses.length} practical courses`); // Áp dụng tất cả các ràng buộc (sự kiện đặc biệt, thời gian, v.v.)
                 const processedDetails = await constraintProcessor.applyAllConstraints(schedule_details, {
                     events,
                     constraints,
                     departmentId: department_id,
                     startDate: start_date,
                     practicalCourses,
+                    courseExams: courses, // Pass course configs for exam scheduling
                 });
 
                 console.log(

@@ -73,7 +73,7 @@ const ScheduleGenerator = () => {
     const [balanceHoursBetweenClasses, setBalanceHoursBetweenClasses] = useState(true);
     const [avoidEmptySlots, setAvoidEmptySlots] = useState(true);
     const [prioritizeMorningClasses, setPrioritizeMorningClasses] = useState(true);
-    const [selfStudyInAfternoon, setSelfStudyInAfternoon] = useState(true);
+    const [selfStudyInAfternoon, setSelfStudyInAfternoon] = useState(false);
 
     // Data states
     const [departments, setDepartments] = useState([]);
@@ -457,6 +457,7 @@ const ScheduleGenerator = () => {
                     max_hours_per_day: course.maxHoursPerDay,
                     min_days_before_exam: course.minDaysBeforeExam,
                     exam_duration: course.examDuration,
+                    is_practical: course.hasPracticalComponent || false,
                 })),
                 constraints: {
                     custom_constraints: constraints,

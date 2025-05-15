@@ -282,7 +282,9 @@ function applyPracticalConstraints(scheduleDetails, practicalCourses = []) {
     return scheduleDetails.map((detail) => {
         // Kiểm tra xem có phải là môn thực hành không
         const courseId = detail.course_id?.toString();
-        if (courseId && practicalSet.has(courseId)) {
+
+        // Set is_practical flag if it's already set or if it's in the practicalCourses set
+        if (detail.is_practical || (courseId && practicalSet.has(courseId))) {
             detail.is_practical = true;
 
             // Tiết thực hành thường cần 2 tiết liên tiếp
@@ -294,13 +296,128 @@ function applyPracticalConstraints(scheduleDetails, practicalCourses = []) {
 }
 
 /**
+ * Xử lý các slot kiểm tra và thi
+ * @param {Array} scheduleDetails - Danh sách chi tiết lịch học
+ * @param {Array} courseExams - Danh sách các cấu hình thi cho các khóa học
+ * @returns {Array} - Danh sách chi tiết lịch học đã xử lý, bao gồm các slot thi
+ */
+function applyExamConstraints(scheduleDetails, courseExams = []) {
+    if (!Array.isArray(scheduleDetails) || scheduleDetails.length === 0) return [];
+    if (!Array.isArray(courseExams) || courseExams.length === 0) return scheduleDetails;
+
+    // Tạo một map để dễ tra cứu cấu hình thi theo ID môn học
+    const examConfigMap = new Map();
+    courseExams.forEach((config) => {
+        if (config.id && config.minDaysBeforeExam && config.examDuration) {
+            examConfigMap.set(config.id.toString(), {
+                minDays: config.minDaysBeforeExam,
+                duration: config.examDuration,
+                phases: config.examPhases || 1,
+            });
+        }
+    });
+
+    // Nếu không có cấu hình thi nào, trả về lịch gốc
+    if (examConfigMap.size === 0) return scheduleDetails;
+
+    // Tạo một bản sao sâu của scheduleDetails để tránh thay đổi mảng gốc
+    const processedSchedules = JSON.parse(JSON.stringify(scheduleDetails));
+    const examSchedules = [];
+
+    // Tạo một map để theo dõi ngày học cuối cùng của mỗi môn
+    const lastClassDayMap = new Map();
+
+    // Trước tiên, xác định ngày học cuối cùng của từng môn
+    processedSchedules.forEach((schedule) => {
+        if (!schedule.course_id || schedule.is_exam) return;
+
+        const courseId = schedule.course_id.toString();
+        const weekDay = `${schedule.week_number}-${schedule.day_of_week}`;
+
+        if (!lastClassDayMap.has(courseId) || compareWeekDays(weekDay, lastClassDayMap.get(courseId)) > 0) {
+            lastClassDayMap.set(courseId, weekDay);
+        }
+    });    // Sau đó, lên lịch các kỳ thi dựa trên cấu hình
+    lastClassDayMap.forEach((lastDay, courseId) => {
+        const examConfig = examConfigMap.get(courseId);
+        if (!examConfig) return;
+
+        // Tách week-day
+        const [lastWeek, lastDayOfWeek] = lastDay.split("-").map(Number);
+        
+        // Xác định số giai đoạn thi
+        const phases = examConfig.phases || 1;
+        
+        // Tính thời gian giữa các giai đoạn thi
+        const phasesGapDays = 2; // Số ngày giữa các giai đoạn thi
+        
+        for (let phase = 1; phase <= phases; phase++) {
+            // Tính ngày thi với khoảng cách phù hợp
+            // Giai đoạn đầu tiên: X ngày sau buổi học cuối
+            // Các giai đoạn tiếp theo: thêm khoảng cách giữa các giai đoạn
+            const phaseDelay = (phase - 1) * phasesGapDays;
+            
+            let examWeek = lastWeek;
+            let examDay = lastDayOfWeek + examConfig.minDays + phaseDelay;
+    
+            // Điều chỉnh nếu vượt qua cuối tuần
+            while (examDay > 5) {
+                // Giả sử tuần học từ ngày 1-5 (thứ 2 đến thứ 6)
+                examDay -= 5;
+                examWeek += 1;
+            }
+    
+            // Tạo slot thi mới
+            examSchedules.push({
+                course_id: courseId,
+                week_number: examWeek,
+                day_of_week: examDay,
+                start_time: "07:30:00", // Giả sử thi vào buổi sáng
+                end_time: calculateEndTime("07:30:00", examConfig.duration),
+                is_exam: true,
+                is_practical: false,
+                is_self_study: false,
+                notes: phases > 1 ? `Thi giai đoạn ${phase}/${phases}` : "Kỳ thi",
+                exam_phase: phase,
+                total_phases: phases
+            });
+        }
+    });
+
+    // Kết hợp lịch học và lịch thi
+    return [...processedSchedules, ...examSchedules];
+}
+
+// Hàm phụ trợ để tính toán thời gian kết thúc dựa trên thời gian bắt đầu và số giờ
+function calculateEndTime(startTime, hours) {
+    const [h, m, s] = startTime.split(":").map(Number);
+    const startDate = new Date(1970, 0, 1, h, m, s);
+    startDate.setHours(startDate.getHours() + hours);
+    return `${String(startDate.getHours()).padStart(2, "0")}:${String(startDate.getMinutes()).padStart(
+        2,
+        "0"
+    )}:${String(startDate.getSeconds()).padStart(2, "0")}`;
+}
+
+// Hàm so sánh chuỗi tuần-ngày theo định dạng "week-day"
+function compareWeekDays(dayA, dayB) {
+    const [weekA, dayOfWeekA] = dayA.split("-").map(Number);
+    const [weekB, dayOfWeekB] = dayB.split("-").map(Number);
+
+    if (weekA !== weekB) {
+        return weekA - weekB;
+    }
+    return dayOfWeekA - dayOfWeekB;
+}
+
+/**
  * Áp dụng tất cả các ràng buộc cho lịch học
  * @param {Array} scheduleDetails - Danh sách chi tiết lịch học
  * @param {Object} options - Các tham số cấu hình
  * @returns {Promise<Array>} - Danh sách chi tiết lịch học đã xử lý
  */
 async function applyAllConstraints(scheduleDetails, options = {}) {
-    const { events, constraints, departmentId, startDate, practicalCourses } = options;
+    const { events, constraints, departmentId, startDate, practicalCourses, courseExams } = options;
 
     console.log(`Applying constraints to ${scheduleDetails?.length || 0} schedule items`);
 
@@ -313,7 +430,11 @@ async function applyAllConstraints(scheduleDetails, options = {}) {
     console.log(`After time constraints: ${filteredByTime.length} items`);
 
     // Áp dụng ràng buộc về tiết thực hành
-    const finalSchedule = applyPracticalConstraints(filteredByTime, practicalCourses);
+    const filteredByPractical = applyPracticalConstraints(filteredByTime, practicalCourses);
+    console.log(`After practical constraints: ${filteredByPractical.length} items`);
+
+    // Áp dụng ràng buộc về kỳ thi
+    const finalSchedule = applyExamConstraints(filteredByPractical, courseExams);
     console.log(`Final schedule after all constraints: ${finalSchedule.length} items`);
 
     return finalSchedule;
@@ -326,6 +447,8 @@ module.exports = {
     applyEventConstraints,
     applyTimeConstraints,
     applyPracticalConstraints,
+    applyExamConstraints,
     applyAllConstraints,
     calculateActualDate,
+    calculateEndTime,
 };

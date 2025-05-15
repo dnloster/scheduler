@@ -204,18 +204,23 @@ const importData = async () => {
                 min_days_before_exam: 2,
                 exam_duration_hours: 6,
                 notes: "Q10 gồm nhiều môn nhỏ",
-            },
-            {
+            },            {
                 course: mainCourses[2]._id, // V30
                 can_be_morning: true,
                 can_be_afternoon: true,
-                notes: "Môn V30 học song song với V31",
+                min_days_before_exam: 3,
+                exam_duration_hours: 4,
+                notes: "Môn V30 học song song với V31, có 5 giai đoạn thi",
+                exam_phases: 5,
             },
             {
                 course: mainCourses[3]._id, // V31
                 can_be_morning: true,
                 can_be_afternoon: true,
-                notes: "Môn V31 học song song với V30",
+                min_days_before_exam: 3,
+                exam_duration_hours: 4,
+                notes: "Môn V31 học song song với V30, có 5 giai đoạn thi",
+                exam_phases: 5,
             },
         ]);
 
@@ -245,12 +250,11 @@ const importData = async () => {
                 date: new Date("2025-09-02"),
                 duration_days: 2,
                 recurring: false,
-            },
-            {
+            },            {
                 name: "Khai giảng",
                 description: "Khai giảng năm học",
-                date: new Date("2025-06-15"),
-                duration_days: 1,
+                date: new Date("2025-09-15"),
+                duration_days: 2,
                 recurring: false,
             },
             {
