@@ -16,6 +16,10 @@ const courseConstraintSchema = new mongoose.Schema({
         type: Boolean,
         default: true,
     },
+    start_date: {
+        type: Date,
+        required: false,
+    },
     requires_consecutive_hours: {
         type: Boolean,
         default: false,

@@ -258,7 +258,9 @@ const Schedule = () => {
         const periodEndMinutes = toMinutes(periodEnd);
 
         return scheduleStartMinutes <= periodStartMinutes && scheduleEndMinutes >= periodEndMinutes;
-    }; // Render một ô lịch học
+    };
+
+    // Render một ô lịch học
     const renderScheduleCell = useCallback(
         (classId, period, date) => {
             const schedule = getScheduleForClassPeriodDay(classId, period, date);
@@ -309,34 +311,27 @@ const Schedule = () => {
                 }
 
                 return null;
-            } // Kiểm tra xem đây có phải là ngày lễ/sự kiện đặc biệt không
+            }
+
+            // Kiểm tra xem đây có phải là ngày lễ/sự kiện đặc biệt không
             const isSpecialEvent = !!schedule.special_event || schedule.is_special_day;
             const isSelfStudy = schedule.is_self_study;
-            const isFlagCeremony = schedule.is_flag_ceremony || (isFlagDay && period >= 1 && period <= 3); // Chào cờ tiết 1-3
+            const isFlagCeremony = schedule.is_flag_ceremony || (isFlagDay && period >= 1 && period <= 2); // Chỉ chào cờ tiết 1-2
             const isCanceled = schedule.is_canceled; // Xác định màu sắc ô dựa vào loại lịch học
 
             // Skip rendering self-study periods if showSelfStudy is false
             if (isSelfStudy && !showSelfStudy) {
                 return null;
             }
-            let bgColor = "#ffffff"; // Mặc định - tất cả dùng nền trắng theo yêu cầu mới
+            let bgColor = "#ffffff"; // Tất cả các ô đều có nền trắng
             let textStyle = {};
 
             if (isSpecialEvent || isHolidayDate) {
-                // bgColor = "#ffebee"; // Không còn dùng màu nền hồng nhạt
                 textStyle.color = "#f44336"; // Văn bản màu đỏ cho sự kiện đặc biệt
-            } else if (isFlagCeremony) {
-                // bgColor = "#e1f5fe"; // Không còn dùng màu nền xanh da trời
-                // Ngôi sao đỏ ở giữa sẽ được xử lý trong phần render
             } else if (isSelfStudy) {
-                // bgColor = "#fff9c4"; // Không còn dùng màu nền vàng nhạt
                 textStyle.fontStyle = "italic"; // Chữ nghiêng cho tiết tự học
             } else if (schedule.is_practical) {
-                // bgColor = "#e3f2fd"; // Không còn dùng màu nền xanh nhạt
                 textStyle.textDecoration = "underline"; // Gạch chân cho tiết thực hành
-            } else {
-                // bgColor = "#e8f5e9"; // Không còn dùng màu nền xanh lá nhạt
-                // Lý thuyết: mặc định màu trắng, chữ đen
             } // Hiển thị mã môn học hoặc biểu tượng đặc biệt
             return (
                 <Box
@@ -386,51 +381,62 @@ const Schedule = () => {
             );
         },
         [getScheduleForClassPeriodDay, showSelfStudy]
-    ); // Tính ngày từ tuần được hiển thị
+    );
+
+    // Tính ngày từ tuần được hiển thị
     const calculateDatesForWeeks = useCallback(() => {
         if (!startDate) return [];
 
         const result = [];
 
+        // Process each week
         for (const week of displayWeeks) {
-            // Tính ngày bắt đầu của tuần
             const weekStart = new Date(startDate);
             weekStart.setDate(weekStart.getDate() + (week - 1) * 7);
 
-            // Thêm 5 ngày trong tuần (thứ 2 đến thứ 6)
+            // Adjust to start from Monday
+            const currentDay = weekStart.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+
+            // If current day is Sunday (0), go one day forward to Monday
+            // If current day is between Tuesday and Saturday (2-6), go back to Monday
+            if (currentDay === 0) {
+                weekStart.setDate(weekStart.getDate() + 1); // Move forward to Monday
+            } else if (currentDay > 1) {
+                weekStart.setDate(weekStart.getDate() - (currentDay - 1)); // Move back to Monday
+            }
+            // If currentDay is 1 (Monday), no adjustment needed
+
+            // Generate 7 days for the week (Monday to Sunday)
             const weekDays = [];
-            for (let i = 0; i < 5; i++) {
+            for (let i = 0; i < 7; i++) {
                 const day = new Date(weekStart);
                 day.setDate(weekStart.getDate() + i);
                 weekDays.push(day);
             }
 
-            // Tính tháng cho mỗi ngày trong tuần
-            const monthNames = [
-                "Tháng 1",
-                "Tháng 2",
-                "Tháng 3",
-                "Tháng 4",
-                "Tháng 5",
-                "Tháng 6",
-                "Tháng 7",
-                "Tháng 8",
-                "Tháng 9",
-                "Tháng 10",
-                "Tháng 11",
-                "Tháng 12",
-            ];
-            const months = weekDays.map((day) => {
-                return {
-                    month: monthNames[day.getMonth()],
-                    monthNumber: day.getMonth(),
-                };
-            });
+            // Calculate month info for each day
+            const months = weekDays.map((day) => ({
+                month: [
+                    "Tháng 1",
+                    "Tháng 2",
+                    "Tháng 3",
+                    "Tháng 4",
+                    "Tháng 5",
+                    "Tháng 6",
+                    "Tháng 7",
+                    "Tháng 8",
+                    "Tháng 9",
+                    "Tháng 10",
+                    "Tháng 11",
+                    "Tháng 12",
+                ][day.getMonth()],
+                monthNumber: day.getMonth(),
+            }));
 
             result.push({
                 weekNumber: week,
                 days: weekDays,
-                months: months,
+                months,
             });
         }
 
@@ -450,12 +456,48 @@ const Schedule = () => {
             );
         }
 
+        // Tập hợp tất cả các ngày và tính toán các nhóm tháng
+        const allDays = weeksWithDates.reduce((acc, week) => [...acc, ...week.days], []);
+        const monthGroups = [];
+        let currentMonth = null;
+        let count = 0;
+
+        allDays.forEach((day, idx) => {
+            const monthNumber = day.getMonth();
+            const monthName = [
+                "Tháng 1",
+                "Tháng 2",
+                "Tháng 3",
+                "Tháng 4",
+                "Tháng 5",
+                "Tháng 6",
+                "Tháng 7",
+                "Tháng 8",
+                "Tháng 9",
+                "Tháng 10",
+                "Tháng 11",
+                "Tháng 12",
+            ][monthNumber];
+
+            if (currentMonth === null || currentMonth.monthNumber !== monthNumber) {
+                if (currentMonth !== null) {
+                    monthGroups.push({ month: currentMonth.monthName, count });
+                }
+                currentMonth = { monthNumber, monthName };
+                count = 1;
+            } else {
+                count++;
+            }
+
+            if (idx === allDays.length - 1) {
+                monthGroups.push({ month: currentMonth.monthName, count });
+            }
+        });
+
         return (
             <TableContainer component={Paper} sx={{ overflow: "auto" }}>
                 <Table size="small" sx={{ minWidth: 800 }}>
-                    {" "}
                     <TableHead>
-                        {/* Hàng 1: Hiển thị tháng */}
                         <TableRow>
                             <TableCell
                                 rowSpan={3}
@@ -471,64 +513,34 @@ const Schedule = () => {
                             >
                                 Tiết
                             </TableCell>
-
-                            {weeksWithDates.map((week) => {
-                                // Nhóm các ngày theo tháng để hiển thị
-                                const monthGroups = [];
-                                let currentMonth = null;
-                                let count = 0;
-
-                                week.months.forEach((m, idx) => {
-                                    if (currentMonth === null || currentMonth.monthNumber !== m.monthNumber) {
-                                        if (currentMonth !== null) {
-                                            monthGroups.push({
-                                                month: currentMonth.month,
-                                                count: count,
-                                            });
-                                        }
-                                        currentMonth = m;
-                                        count = 1;
-                                    } else {
-                                        count++;
-                                    }
-
-                                    // Nếu là phần tử cuối cùng
-                                    if (idx === week.months.length - 1) {
-                                        monthGroups.push({
-                                            month: currentMonth.month,
-                                            count: count,
-                                        });
-                                    }
-                                });
-
-                                return monthGroups.map((group, idx) => (
-                                    <TableCell
-                                        key={`month-${week.weekNumber}-${idx}`}
-                                        colSpan={group.count}
-                                        align="center"
-                                        sx={{
-                                            backgroundColor: "#f5f5f5",
-                                            fontWeight: "bold",
-                                            borderBottom: "1px solid rgba(224, 224, 224, 0.5)",
-                                        }}
-                                    >
-                                        {group.month}
-                                    </TableCell>
-                                ));
-                            })}
+                            {monthGroups.map((group, idx) => (
+                                <TableCell
+                                    key={`month-${idx}`}
+                                    colSpan={group.count}
+                                    align="center"
+                                    sx={{
+                                        backgroundColor: "#ffffff",
+                                        fontWeight: "bold",
+                                        borderBottom: "1px solid rgba(224, 224, 224, 1)",
+                                        borderRight: "1px solid rgba(224, 224, 224, 1)",
+                                    }}
+                                >
+                                    {group.month}
+                                </TableCell>
+                            ))}
                         </TableRow>
 
-                        {/* Hàng 2: Hiển thị số tuần */}
                         <TableRow>
                             {weeksWithDates.map((week) => (
                                 <TableCell
                                     key={`week-${week.weekNumber}`}
-                                    colSpan={5}
+                                    colSpan={7}
                                     align="center"
                                     sx={{
                                         fontWeight: "bold",
-                                        backgroundColor: "#e3f2fd",
-                                        borderBottom: "1px solid rgba(224, 224, 224, 0.5)",
+                                        backgroundColor: "#ffffff",
+                                        borderBottom: "1px solid rgba(224, 224, 224, 1)",
+                                        borderRight: "1px solid rgba(224, 224, 224, 1)",
                                     }}
                                 >
                                     Tuần {week.weekNumber}
@@ -536,13 +548,12 @@ const Schedule = () => {
                             ))}
                         </TableRow>
 
-                        {/* Hàng 3: Hiển thị ngày */}
                         <TableRow>
                             {weeksWithDates.map((week) =>
                                 week.days.map((date, dayIndex) => {
                                     const isHolidayDate = isHoliday(date);
                                     const day = date.getDate();
-                                    const dayOfWeek = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"][date.getDay()];
+                                    const isWeekend = dayIndex === 5 || dayIndex === 6;
 
                                     return (
                                         <TableCell
@@ -550,16 +561,14 @@ const Schedule = () => {
                                             align="center"
                                             sx={{
                                                 minWidth: 60,
-                                                backgroundColor: isHolidayDate ? "#ffebee" : "#f8f9fa",
-                                                borderRight:
-                                                    dayIndex < 4
-                                                        ? "1px solid rgba(224, 224, 224, 0.3)"
-                                                        : "2px solid rgba(224, 224, 224, 1)",
+                                                backgroundColor: "#ffffff",
+                                                borderRight: "1px solid rgba(224, 224, 224, 1)",
                                                 padding: "4px",
                                                 fontWeight: "bold",
+                                                color: isWeekend ? "#757575" : "inherit",
                                             }}
                                         >
-                                            {day} ({dayOfWeek})
+                                            {day}
                                         </TableCell>
                                     );
                                 })
@@ -568,7 +577,6 @@ const Schedule = () => {
                     </TableHead>
                     <TableBody>
                         {classes.map((cls) =>
-                            // Mỗi lớp sẽ có 9 tiết học mỗi ngày, nhưng nhóm lại thành 5 hàng
                             [
                                 { start: 1, end: 2, label: "1-2" },
                                 { start: 3, end: 4, label: "3-4" },
@@ -581,16 +589,20 @@ const Schedule = () => {
                                         <TableCell
                                             rowSpan={5}
                                             align="center"
-                                            sx={{ fontWeight: "bold", backgroundColor: "#f5f5f5" }}
+                                            sx={{
+                                                fontWeight: "bold",
+                                                backgroundColor: "#ffffff",
+                                                borderRight: "1px solid rgba(224, 224, 224, 1)",
+                                            }}
                                         >
                                             {cls.name}
                                         </TableCell>
-                                    )}{" "}
+                                    )}
                                     <TableCell
                                         align="center"
                                         sx={{
                                             fontWeight: "bold",
-                                            backgroundColor: "#f5f5f5",
+                                            backgroundColor: "#ffffff",
                                             borderRight: "1px solid rgba(224, 224, 224, 1)",
                                         }}
                                     >
@@ -605,10 +617,11 @@ const Schedule = () => {
                                                 sx={{
                                                     height: 40,
                                                     borderRight:
-                                                        dayIndex < 4
-                                                            ? "1px solid rgba(224, 224, 224, 0.3)"
-                                                            : "2px solid rgba(224, 224, 224, 1)",
-                                                    borderBottom: "1px solid rgba(224, 224, 224, 0.7)",
+                                                        dayIndex === 6
+                                                            ? "2px solid rgba(224, 224, 224, 1)"
+                                                            : "1px solid rgba(224, 224, 224, 1)",
+                                                    borderBottom: "1px solid rgba(224, 224, 224, 1)",
+                                                    backgroundColor: "#ffffff",
                                                 }}
                                             >
                                                 {renderScheduleCell(cls._id, periodGroup.start, date)}
@@ -623,6 +636,7 @@ const Schedule = () => {
             </TableContainer>
         );
     }, [classes, renderScheduleCell, weeksWithDates]); // Hiển thị chú thích
+
     const legend = (
         <Box mb={2} display="flex" gap={2} flexWrap="wrap">
             <Tooltip title="Tiết học lý thuyết">

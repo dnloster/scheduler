@@ -5,6 +5,7 @@ const Class = require("./models/Class");
 const Schedule = require("./models/Schedule");
 const CourseConstraint = require("./models/CourseConstraint");
 const SpecialEvent = require("./models/SpecialEvent");
+const { checkStartWeekConstraint } = require("./constraints/start-week-constraint");
 
 // Hàm kiểm tra khung giờ có sẵn không
 async function isTimeSlotAvailable(classId, day, week, startTime, endTime) {
@@ -72,19 +73,120 @@ async function canScheduleCourse(courseId, classId, day, week, startTime, endTim
             return { success: false, message: "Khung giờ đã được sử dụng" };
         }
 
-        // Lấy ràng buộc của môn học
-        const constraint = await CourseConstraint.findOne({ course: courseId });
-
+        // Lấy ràng buộc của môn học        const constraint = await CourseConstraint.findOne({ course: courseId });
         if (!constraint) {
             return { success: true };
+        }
+
+        // Kiểm tra tuần bắt đầu
+        if (constraint.start_week && week < constraint.start_week) {
+            return {
+                success: false,
+                message: `Môn học này chỉ có thể bắt đầu từ tuần ${constraint.start_week}`,
+            };
         }
 
         // Kiểm tra ràng buộc về thời gian trong ngày (sáng/chiều)
         const hour = parseInt(startTime.split(":")[0], 10);
         const isMorning = hour < 12;
+        const isAfternoon = hour >= 13;
 
-        if ((isMorning && !constraint.can_be_morning) || (!isMorning && !constraint.can_be_afternoon)) {
-            return { success: false, message: "Môn học không thể xếp vào thời điểm này trong ngày" };
+        if (isMorning && !constraint.can_be_morning) {
+            return { success: false, message: "Môn học không thể xếp vào buổi sáng" };
+        }
+
+        if (isAfternoon && !constraint.can_be_afternoon) {
+            return { success: false, message: "Môn học không thể xếp vào buổi chiều" };
+        }
+
+        // Kiểm tra giới hạn số giờ buổi sáng
+        if (isMorning && constraint.max_morning_hours > 0) {
+            const existingMorningHours = await Schedule.aggregate([
+                {
+                    $match: {
+                        class: classId,
+                        course: courseId,
+                        week_number: week,
+                        $expr: {
+                            $lt: [{ $toInt: { $substr: ["$start_time", 0, 2] } }, 12],
+                        },
+                    },
+                },
+                {
+                    $project: {
+                        hours: {
+                            $divide: [
+                                {
+                                    $subtract: [
+                                        { $toDate: { $concat: ["1970-01-01T", "$end_time"] } },
+                                        { $toDate: { $concat: ["1970-01-01T", "$start_time"] } },
+                                    ],
+                                },
+                                3600000,
+                            ],
+                        },
+                    },
+                },
+                {
+                    $group: {
+                        _id: null,
+                        totalHours: { $sum: "$hours" },
+                    },
+                },
+            ]);
+
+            const morningHours = existingMorningHours.length > 0 ? existingMorningHours[0].totalHours : 0;
+            const newHours =
+                (new Date(`1970-01-01T${endTime}`) - new Date(`1970-01-01T${startTime}`)) / (1000 * 60 * 60);
+
+            if (morningHours + newHours > constraint.max_morning_hours) {
+                return { success: false, message: "Vượt quá số giờ tối đa buổi sáng" };
+            }
+        }
+
+        // Kiểm tra giới hạn số giờ buổi chiều
+        if (isAfternoon && constraint.max_afternoon_hours > 0) {
+            const existingAfternoonHours = await Schedule.aggregate([
+                {
+                    $match: {
+                        class: classId,
+                        course: courseId,
+                        week_number: week,
+                        $expr: {
+                            $gte: [{ $toInt: { $substr: ["$start_time", 0, 2] } }, 13],
+                        },
+                    },
+                },
+                {
+                    $project: {
+                        hours: {
+                            $divide: [
+                                {
+                                    $subtract: [
+                                        { $toDate: { $concat: ["1970-01-01T", "$end_time"] } },
+                                        { $toDate: { $concat: ["1970-01-01T", "$start_time"] } },
+                                    ],
+                                },
+                                3600000,
+                            ],
+                        },
+                    },
+                },
+                {
+                    $group: {
+                        _id: null,
+                        totalHours: { $sum: "$hours" },
+                    },
+                },
+            ]);
+
+            const afternoonHours = existingAfternoonHours.length > 0 ? existingAfternoonHours[0].totalHours : 0;
+            const newHours =
+                (new Date(`1970-01-01T${endTime}`) - new Date(`1970-01-01T${startTime}`)) / (1000 * 60 * 60);
+
+            if (afternoonHours + newHours > constraint.max_afternoon_hours) {
+                return { success: false, message: "Vượt quá số giờ tối đa buổi chiều" };
+            }
         }
 
         // Kiểm tra số giờ tối đa trong ngày
@@ -122,10 +224,8 @@ async function canScheduleCourse(courseId, classId, day, week, startTime, endTim
             ]);
 
             const existingTotalHours = existingHoursInDay.length > 0 ? existingHoursInDay[0].totalHours : 0;
-
-            const startDate = new Date(`1970-01-01T${startTime}`);
-            const endDate = new Date(`1970-01-01T${endTime}`);
-            const newHours = (endDate - startDate) / (1000 * 60 * 60);
+            const newHours =
+                (new Date(`1970-01-01T${endTime}`) - new Date(`1970-01-01T${startTime}`)) / (1000 * 60 * 60);
 
             if (existingTotalHours + newHours > constraint.max_hours_per_day) {
                 return { success: false, message: "Vượt quá số giờ tối đa trong ngày cho môn học này" };
@@ -166,10 +266,8 @@ async function canScheduleCourse(courseId, classId, day, week, startTime, endTim
             ]);
 
             const existingTotalHours = existingHoursInWeek.length > 0 ? existingHoursInWeek[0].totalHours : 0;
-
-            const startDate = new Date(`1970-01-01T${startTime}`);
-            const endDate = new Date(`1970-01-01T${endTime}`);
-            const newHours = (endDate - startDate) / (1000 * 60 * 60);
+            const newHours =
+                (new Date(`1970-01-01T${endTime}`) - new Date(`1970-01-01T${startTime}`)) / (1000 * 60 * 60);
 
             if (existingTotalHours + newHours > constraint.max_hours_per_week) {
                 return { success: false, message: "Vượt quá số giờ tối đa trong tuần cho môn học này" };
@@ -178,8 +276,8 @@ async function canScheduleCourse(courseId, classId, day, week, startTime, endTim
 
         return { success: true };
     } catch (error) {
-        console.error("Error checking if course can be scheduled:", error);
-        return { success: false, message: "Lỗi khi kiểm tra khả năng xếp lịch môn học" };
+        console.error("Error checking course scheduling:", error);
+        return { success: false, message: "Lỗi kiểm tra ràng buộc xếp lịch" };
     }
 }
 
@@ -257,8 +355,17 @@ async function generateDepartmentSchedule(departmentId, startDate, endDate, tota
         for (let week = 1; week <= totalWeeks; week++) {
             for (const event of recurringEvents) {
                 if (event.recurring_pattern === "FIRST_MONDAY" && week % 4 === 1) {
-                    // Chào cờ vào thứ 2 đầu tháng
-                    await scheduleSpecialEvent(event._id, week, 1);
+                    // Chào cờ vào thứ 2 đầu tháng, chỉ tiết 1-2 (7:30-9:00)
+                    const newFlagSchedule = new Schedule({
+                        special_event: event._id,
+                        day_of_week: 1, // Monday
+                        week_number: week,
+                        start_time: "07:30:00",
+                        end_time: "09:00:00",
+                        is_flag_ceremony: true,
+                        notes: event.name,
+                    });
+                    await newFlagSchedule.save();
                 } else if (event.recurring_pattern === "EVERY_THURSDAY") {
                     // Bảo quản vào chiều thứ 5 hàng tuần
                     const newSchedule = new Schedule({
@@ -266,7 +373,8 @@ async function generateDepartmentSchedule(departmentId, startDate, endDate, tota
                         day_of_week: 4, // Thursday
                         week_number: week,
                         start_time: "13:30:00",
-                        end_time: "16:00:00",
+                        end_time: "15:00:00", // Điều chỉnh thành tiết 7-8
+                        is_maintenance: true,
                         notes: event.name,
                     });
 
@@ -384,6 +492,12 @@ async function calculateTotalHours(departmentId) {
         console.error("Error calculating total hours:", error);
         return { success: false, message: "Lỗi khi tính tổng số giờ học", error };
     }
+}
+
+// Hàm chuyển đổi thời gian từ chuỗi "HH:mm" sang số phút từ 00:00
+function convertTimeToMinutes(timeString) {
+    const [hours, minutes] = timeString.split(":").map(Number);
+    return hours * 60 + minutes;
 }
 
 module.exports = {

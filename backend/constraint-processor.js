@@ -188,9 +188,11 @@ async function applyEventConstraints(scheduleDetails, events, departmentId, star
             detail.actual_date = actualDate;
             detail.notes = "Ngày nghỉ lễ";
             detail.is_canceled = true;
-        }
-        // Kiểm tra ngày chào cờ
-        else if (isFlagCeremonyDay(actualDate)) {
+        } // Kiểm tra ngày chào cờ - chỉ ảnh hưởng đến tiết 1-2
+        else if (
+            isFlagCeremonyDay(actualDate) &&
+            (detail.start_time === "07:30:00" || (detail.start_time <= "09:00:00" && detail.end_time >= "07:30:00"))
+        ) {
             const hour = parseInt(detail.start_time.split(":")[0]);
             // Nếu là buổi sáng, đánh dấu là chào cờ
             if (hour < 12 && hour >= 7) {
@@ -250,12 +252,68 @@ function applyTimeConstraints(scheduleDetails, constraints) {
 
     const { prioritize_morning = false, self_study_afternoon = false } = constraints;
 
+    // Create a map of course constraints for faster lookup
+    const courseConstraints = new Map();
+    if (Array.isArray(constraints.custom_constraints)) {
+        constraints.custom_constraints.forEach((constraint) => {
+            if (constraint.course) {
+                courseConstraints.set(constraint.course.toString(), constraint);
+            }
+        });
+    }
+
     // Xử lý từng mục trong lịch học
-    return scheduleDetails.map((detail) => {
+    return scheduleDetails.filter((detail) => {
         // Xác định buổi học (sáng hay chiều)
         const hour = parseInt(detail.start_time.split(":")[0]);
         const isMorning = hour < 12;
         const isAfternoon = hour >= 13;
+
+        // Get course constraints if available
+        const courseId = detail.course_id?.toString();
+        const courseConstraint = courseId ? courseConstraints.get(courseId) : null;
+
+        // Kiểm tra giới hạn buổi sáng/chiều nếu có
+        if (courseConstraint) {
+            // Kiểm tra giới hạn thời gian bắt đầu
+            if (courseConstraint.earliest_start_time || courseConstraint.latest_start_time) {
+                const startTimeMinutes =
+                    parseInt(detail.start_time.split(":")[0]) * 60 + parseInt(detail.start_time.split(":")[1]);
+
+                if (courseConstraint.earliest_start_time) {
+                    const earliestMinutes =
+                        parseInt(courseConstraint.earliest_start_time.split(":")[0]) * 60 +
+                        parseInt(courseConstraint.earliest_start_time.split(":")[1]);
+                    if (startTimeMinutes < earliestMinutes) {
+                        return false;
+                    }
+                }
+
+                if (courseConstraint.latest_start_time) {
+                    const latestMinutes =
+                        parseInt(courseConstraint.latest_start_time.split(":")[0]) * 60 +
+                        parseInt(courseConstraint.latest_start_time.split(":")[1]);
+                    if (startTimeMinutes > latestMinutes) {
+                        return false;
+                    }
+                }
+            }
+
+            // Nếu không cho phép học buổi sáng
+            if (isMorning && !courseConstraint.can_be_morning) {
+                return false;
+            }
+
+            // Nếu không cho phép học buổi chiều
+            if (isAfternoon && !courseConstraint.can_be_afternoon) {
+                return false;
+            }
+        }
+
+        // Ưu tiên xếp lịch buổi sáng nếu được yêu cầu
+        if (prioritize_morning && !isMorning && !detail.is_practical) {
+            return false;
+        }
 
         // Nếu chỉ cần đánh dấu các buổi học chiều là tự học
         if (self_study_afternoon && isAfternoon) {
@@ -263,7 +321,7 @@ function applyTimeConstraints(scheduleDetails, constraints) {
             detail.notes = (detail.notes || "") + " (Buổi tự học)";
         }
 
-        return detail;
+        return true;
     });
 }
 

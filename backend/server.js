@@ -542,19 +542,22 @@ app.post("/api/constraints", async (req, res) => {
             max_hours_per_day,
             can_be_morning,
             can_be_afternoon,
+            earliest_start_time,
+            latest_start_time,
             requires_consecutive_hours,
             min_days_before_exam,
             exam_duration_hours,
             grouped_classes,
             notes,
         } = req.body;
-
         const constraint = new CourseConstraint({
             course,
             max_hours_per_week,
             max_hours_per_day,
             can_be_morning,
             can_be_afternoon,
+            earliest_start_time,
+            latest_start_time,
             requires_consecutive_hours,
             min_days_before_exam,
             exam_duration_hours,
@@ -578,13 +581,14 @@ app.put("/api/constraints/:id", async (req, res) => {
             max_hours_per_day,
             can_be_morning,
             can_be_afternoon,
+            earliest_start_time,
+            latest_start_time,
             requires_consecutive_hours,
             min_days_before_exam,
             exam_duration_hours,
             grouped_classes,
             notes,
         } = req.body;
-
         const constraint = await CourseConstraint.findByIdAndUpdate(
             req.params.id,
             {
@@ -593,6 +597,8 @@ app.put("/api/constraints/:id", async (req, res) => {
                 max_hours_per_day,
                 can_be_morning,
                 can_be_afternoon,
+                earliest_start_time,
+                latest_start_time,
                 requires_consecutive_hours,
                 min_days_before_exam,
                 exam_duration_hours,

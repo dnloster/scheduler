@@ -15,7 +15,6 @@ import {
     ListItem,
     ListItemText,
     ListItemIcon,
-    Chip,
 } from "@mui/material";
 import { DatePicker } from "@mui/x-date-pickers";
 import { Event as EventIcon, Warning as WarningIcon } from "@mui/icons-material";
@@ -315,23 +314,25 @@ const Step2SpecialEvents = ({
                                                 }
                                             />
                                         </Grid>
-                                    </Grid>
+                                    </Grid>{" "}
                                     {event.selected !== false && event.duration_days > 1 && (
                                         <Box mt={2} p={1} bgcolor="rgba(103, 58, 183, 0.1)" borderRadius={1}>
                                             <Typography variant="caption" display="block">
                                                 <strong>Tóm tắt:</strong> Sự kiện sẽ diễn ra trong {event.duration_days}{" "}
                                                 ngày, từ{" "}
-                                                {formatDate(event.start_date) ||
-                                                    formatDate(event.date) ||
+                                                {formatDate(event.date) ||
+                                                    formatDate(event.start_date) ||
                                                     "(chưa chọn)"}{" "}
                                                 đến{" "}
-                                                {formatDate(event.end_date) ||
-                                                    (event.date && event.duration_days > 1
-                                                        ? dayjs(event.date)
+                                                {event.end_date
+                                                    ? formatDate(event.end_date)
+                                                    : event.date && event.duration_days > 1
+                                                    ? formatDate(
+                                                          dayjs(event.date)
                                                               .add(event.duration_days - 1, "day")
                                                               .format("YYYY-MM-DD")
-                                                        : formatDate(event.date)) ||
-                                                    "(chưa chọn)"}
+                                                      )
+                                                    : formatDate(event.date) || "(chưa chọn)"}
                                             </Typography>
                                         </Box>
                                     )}
@@ -569,24 +570,25 @@ const Step2SpecialEvents = ({
                                                 }
                                             />
                                         </Grid>
-                                    </Grid>
-
+                                    </Grid>{" "}
                                     {event.selected !== false && event.duration_days > 1 && (
-                                        <Box mt={2} p={1} bgcolor="rgba(244, 67, 54, 0.1)" borderRadius={1}>
+                                        <Box mt={2} p={1} bgcolor="rgba(103, 58, 183, 0.1)" borderRadius={1}>
                                             <Typography variant="caption" display="block">
                                                 <strong>Tóm tắt:</strong> Ngày nghỉ sẽ kéo dài {event.duration_days}{" "}
                                                 ngày, từ{" "}
-                                                {formatDate(event.start_date) ||
-                                                    formatDate(event.date) ||
+                                                {formatDate(event.date) ||
+                                                    formatDate(event.start_date) ||
                                                     "(chưa chọn)"}{" "}
                                                 đến{" "}
-                                                {formatDate(event.end_date) ||
-                                                    (event.date && event.duration_days > 1
-                                                        ? dayjs(event.date)
+                                                {event.end_date
+                                                    ? formatDate(event.end_date)
+                                                    : event.date && event.duration_days > 1
+                                                    ? formatDate(
+                                                          dayjs(event.date)
                                                               .add(event.duration_days - 1, "day")
-                                                              .format("DD/MM/YYYY")
-                                                        : formatDate(event.date)) ||
-                                                    "(chưa chọn)"}
+                                                              .format("YYYY-MM-DD")
+                                                      )
+                                                    : formatDate(event.date) || "(chưa chọn)"}
                                             </Typography>
                                         </Box>
                                     )}

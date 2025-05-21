@@ -19,6 +19,7 @@ import {
     AlertTitle,
     FormGroup,
     Checkbox,
+    TextField,
 } from "@mui/material";
 import {
     Add as AddIcon,
@@ -45,6 +46,8 @@ const Step4Constraints = ({
     setPrioritizeMorningClasses,
     selfStudyInAfternoon,
     setSelfStudyInAfternoon,
+    selfStudyPattern,
+    setSelfStudyPattern,
 }) => {
     // Định nghĩa ngày trong tuần để chọn
     const daysOfWeek = [
@@ -69,7 +72,6 @@ const Step4Constraints = ({
                             Các tùy chọn dưới đây giúp tối ưu hóa lịch học cho tất cả các lớp và môn học.
                         </Typography>
                     </Grid>
-
                     <Grid item xs={12} md={6}>
                         <FormGroup>
                             <FormControlLabel
@@ -87,7 +89,6 @@ const Step4Constraints = ({
                             </Typography>
                         </FormGroup>
                     </Grid>
-
                     <Grid item xs={12} md={6}>
                         <FormGroup>
                             <FormControlLabel
@@ -105,7 +106,6 @@ const Step4Constraints = ({
                             </Typography>
                         </FormGroup>
                     </Grid>
-
                     <Grid item xs={12} md={6}>
                         <FormGroup>
                             <FormControlLabel
@@ -122,8 +122,7 @@ const Step4Constraints = ({
                                 Xếp lịch học vào buổi sáng nhiều hơn buổi chiều
                             </Typography>
                         </FormGroup>
-                    </Grid>
-
+                    </Grid>{" "}
                     <Grid item xs={12} md={6}>
                         <FormGroup>
                             <FormControlLabel
@@ -137,8 +136,23 @@ const Step4Constraints = ({
                                 label="Tự học vào buổi chiều"
                             />
                             <Typography variant="caption" color="text.secondary" sx={{ ml: 4 }}>
-                                Dành thời gian buổi chiều cho hoạt động tự học
+                                Khi đã xếp đủ tiết học trong tuần, các tiết còn lại sẽ được xếp tự học vào buổi chiều
+                                (tiết 7-8-9) hoặc chỉ tiết cuối (tiết 9) sao cho không có tiết trống trong ngày.
                             </Typography>
+                            {selfStudyInAfternoon && (
+                                <FormControl sx={{ ml: 4, mt: 1 }}>
+                                    <Select
+                                        size="small"
+                                        value={selfStudyPattern}
+                                        onChange={(e) => setSelfStudyPattern(e.target.value)}
+                                    >
+                                        <MenuItem value="last_period">Chỉ xếp tự học vào tiết 9</MenuItem>
+                                        <MenuItem value="all_afternoon">
+                                            Có thể xếp tự học cả buổi chiều (tiết 7-8-9)
+                                        </MenuItem>
+                                    </Select>
+                                </FormControl>
+                            )}
                         </FormGroup>
                     </Grid>
                 </Grid>
@@ -233,10 +247,11 @@ const Step4Constraints = ({
 
                                         {constraint.type === "time" && (
                                             <Box>
+                                                {" "}
                                                 <FormControl fullWidth sx={{ mb: 2 }}>
                                                     <InputLabel>Loại ràng buộc</InputLabel>
                                                     <Select
-                                                        value={constraint.subtype}
+                                                        value={constraint.subtype || "preferred_days"}
                                                         label="Loại ràng buộc"
                                                         onChange={(e) =>
                                                             handleUpdateConstraint(index, "subtype", e.target.value)
@@ -244,41 +259,107 @@ const Step4Constraints = ({
                                                     >
                                                         <MenuItem value="preferred_days">Ngày ưu tiên</MenuItem>
                                                         <MenuItem value="blocked_days">Ngày không học</MenuItem>
+                                                        <MenuItem value="time_range">Giới hạn thời gian</MenuItem>
+                                                        <MenuItem value="start_week">Tuần bắt đầu</MenuItem>
                                                     </Select>
                                                 </FormControl>
-
-                                                <Typography variant="subtitle2" gutterBottom>
-                                                    {constraint.subtype === "preferred_days"
-                                                        ? "Chọn ngày ưu tiên"
-                                                        : "Chọn ngày không học"}
-                                                </Typography>
-
-                                                <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
-                                                    {daysOfWeek.map((day) => (
-                                                        <FormControlLabel
-                                                            key={day.id}
-                                                            control={
-                                                                <Checkbox
-                                                                    checked={constraint.value?.includes(day.id)}
-                                                                    onChange={(e) => {
-                                                                        const currentValues = constraint.value || [];
-                                                                        const newValues = e.target.checked
-                                                                            ? [...currentValues, day.id]
-                                                                            : currentValues.filter((v) => v !== day.id);
-                                                                        handleUpdateConstraint(
-                                                                            index,
-                                                                            "value",
-                                                                            newValues
-                                                                        );
-                                                                    }}
-                                                                    size="small"
-                                                                />
+                                                {constraint.subtype === "start_week" && (
+                                                    <FormControl fullWidth sx={{ mb: 2 }}>
+                                                        <TextField
+                                                            type="number"
+                                                            label="Tuần bắt đầu"
+                                                            value={constraint.start_week || 1}
+                                                            onChange={(e) =>
+                                                                handleUpdateConstraint(
+                                                                    index,
+                                                                    "start_week",
+                                                                    parseInt(e.target.value)
+                                                                )
                                                             }
-                                                            label={day.name}
-                                                            sx={{ width: "45%" }}
+                                                            inputProps={{ min: 1 }}
                                                         />
-                                                    ))}
-                                                </Box>
+                                                    </FormControl>
+                                                )}
+                                                {constraint.subtype === "time_range" && (
+                                                    <Grid container spacing={2}>
+                                                        <Grid item xs={12} md={6}>
+                                                            <TextField
+                                                                fullWidth
+                                                                label="Thời gian bắt đầu sớm nhất"
+                                                                type="time"
+                                                                value={constraint.earliest_start_time || "07:00"}
+                                                                onChange={(e) =>
+                                                                    handleUpdateConstraint(
+                                                                        index,
+                                                                        "earliest_start_time",
+                                                                        e.target.value
+                                                                    )
+                                                                }
+                                                                inputProps={{ step: 300 }}
+                                                                helperText="Trước giờ này không thể bắt đầu học"
+                                                                InputLabelProps={{ shrink: true }}
+                                                            />
+                                                        </Grid>
+                                                        <Grid item xs={12} md={6}>
+                                                            <TextField
+                                                                fullWidth
+                                                                label="Thời gian bắt đầu muộn nhất"
+                                                                type="time"
+                                                                value={constraint.latest_start_time || "15:30"}
+                                                                onChange={(e) =>
+                                                                    handleUpdateConstraint(
+                                                                        index,
+                                                                        "latest_start_time",
+                                                                        e.target.value
+                                                                    )
+                                                                }
+                                                                inputProps={{ step: 300 }}
+                                                                helperText="Sau giờ này không thể bắt đầu học"
+                                                                InputLabelProps={{ shrink: true }}
+                                                            />
+                                                        </Grid>
+                                                    </Grid>
+                                                )}
+                                                {(constraint.subtype === "preferred_days" ||
+                                                    constraint.subtype === "blocked_days") && (
+                                                    <>
+                                                        <Typography variant="subtitle2" gutterBottom>
+                                                            {constraint.subtype === "preferred_days"
+                                                                ? "Chọn ngày ưu tiên"
+                                                                : "Chọn ngày không học"}
+                                                        </Typography>
+
+                                                        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
+                                                            {daysOfWeek.map((day) => (
+                                                                <FormControlLabel
+                                                                    key={day.id}
+                                                                    control={
+                                                                        <Checkbox
+                                                                            checked={constraint.value?.includes(day.id)}
+                                                                            onChange={(e) => {
+                                                                                const currentValues =
+                                                                                    constraint.value || [];
+                                                                                const newValues = e.target.checked
+                                                                                    ? [...currentValues, day.id]
+                                                                                    : currentValues.filter(
+                                                                                          (v) => v !== day.id
+                                                                                      );
+                                                                                handleUpdateConstraint(
+                                                                                    index,
+                                                                                    "value",
+                                                                                    newValues
+                                                                                );
+                                                                            }}
+                                                                            size="small"
+                                                                        />
+                                                                    }
+                                                                    label={day.name}
+                                                                    sx={{ width: "45%" }}
+                                                                />
+                                                            ))}
+                                                        </Box>
+                                                    </>
+                                                )}
                                             </Box>
                                         )}
 
@@ -450,6 +531,8 @@ Step4Constraints.propTypes = {
     setPrioritizeMorningClasses: PropTypes.func.isRequired,
     selfStudyInAfternoon: PropTypes.bool.isRequired,
     setSelfStudyInAfternoon: PropTypes.func.isRequired,
+    selfStudyPattern: PropTypes.oneOf(["last_period", "all_afternoon"]).isRequired,
+    setSelfStudyPattern: PropTypes.func.isRequired,
 };
 
 export default Step4Constraints;
