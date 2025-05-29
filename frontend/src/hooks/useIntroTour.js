@@ -1,21 +1,21 @@
-import { useState, useEffect } from 'react';
-import introService from '../services/introService';
+import { useState, useEffect } from "react";
+import introService from "../services/introService";
 
-const TOUR_STORAGE_KEY = 'scheduler_tours_completed';
+const TOUR_STORAGE_KEY = "scheduler_tours_completed";
 
 export const useIntroTour = () => {
     const [tourCompleted, setTourCompleted] = useState({});
 
     useEffect(() => {
         // Load completed tours from localStorage
-        const completed = JSON.parse(localStorage.getItem(TOUR_STORAGE_KEY) || '{}');
+        const completed = JSON.parse(localStorage.getItem(TOUR_STORAGE_KEY) || "{}");
         setTourCompleted(completed);
     }, []);
 
     const markTourCompleted = (tourName) => {
         const updated = {
             ...tourCompleted,
-            [tourName]: true
+            [tourName]: true,
         };
         setTourCompleted(updated);
         localStorage.setItem(TOUR_STORAGE_KEY, JSON.stringify(updated));
@@ -34,19 +34,19 @@ export const useIntroTour = () => {
         let tourPromise;
 
         switch (tourName) {
-            case 'dashboard':
+            case "dashboard":
                 tourPromise = introService.startDashboardTour();
                 break;
-            case 'course':
+            case "course":
                 tourPromise = introService.startCourseTour();
                 break;
-            case 'schedule':
+            case "schedule":
                 tourPromise = introService.startScheduleTour();
                 break;
-            case 'quick':
+            case "quick":
                 tourPromise = introService.startQuickTour();
                 break;
-            case 'custom':
+            case "custom":
                 if (customSteps) {
                     tourPromise = introService.startCustomTour(customSteps);
                 }
@@ -73,7 +73,7 @@ export const useIntroTour = () => {
         isTourCompleted,
         markTourCompleted,
         resetTours,
-        startTour
+        startTour,
     };
 };
 

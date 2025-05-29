@@ -348,7 +348,7 @@ const CourseForm = () => {
             ...prev,
             constraints: config,
         }));
-    };    // Handle tab change
+    }; // Handle tab change
     const handleTabChange = (event, newValue) => {
         setActiveTab(newValue);
     };
@@ -367,7 +367,8 @@ const CourseForm = () => {
                 setError("Không thể xóa môn học. Vui lòng thử lại sau.");
             }
         }
-    };return (
+    };
+    return (
         <Container maxWidth="md" sx={{ mt: 4, mb: 4 }} data-intro="course-form-main">
             <Zoom in={true} style={{ transitionDelay: "100ms" }}>
                 <Paper
@@ -435,7 +436,9 @@ const CourseForm = () => {
 
                     {!loading && (
                         <Fade in={true} timeout={800}>
-                            <Box component="form" onSubmit={handleSubmit}>                                {/* Tabs for Basic Info and Configuration */}
+                            <Box component="form" onSubmit={handleSubmit}>
+                                {" "}
+                                {/* Tabs for Basic Info and Configuration */}
                                 <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 3 }} data-intro="course-tabs">
                                     <Tabs value={activeTab} onChange={handleTabChange} aria-label="course form tabs">
                                         <Tab
@@ -453,7 +456,6 @@ const CourseForm = () => {
                                         />
                                     </Tabs>
                                 </Box>
-
                                 {/* Tab Panel 0: Basic Information */}
                                 <Box role="tabpanel" hidden={activeTab !== 0} id="tabpanel-0" aria-labelledby="tab-0">
                                     {activeTab === 0 && (
@@ -757,7 +759,6 @@ const CourseForm = () => {
                                         </>
                                     )}
                                 </Box>
-
                                 {/* Tab Panel 1: Course Configuration */}
                                 <Box role="tabpanel" hidden={activeTab !== 1} id="tabpanel-1" aria-labelledby="tab-1">
                                     {activeTab === 1 && (
@@ -767,7 +768,6 @@ const CourseForm = () => {
                                         />
                                     )}
                                 </Box>
-
                                 {/* Submit Button */}
                                 <Box
                                     sx={{

@@ -22,11 +22,7 @@ import { generateSchedule } from "../../api/scheduleService";
 import { createEvent, getEvents } from "../../api/eventService";
 
 // Import helpers
-import {
-    mapClassesById,
-    findClassId,
-    findCourseId,
-} from "../../utils/objectIdHelper";
+import { mapClassesById, findClassId, findCourseId } from "../../utils/objectIdHelper";
 
 // Import enhanced helpers that can handle edge cases better
 import enhancedHelper from "../../utils/enhancedObjectIdHelper";
@@ -58,7 +54,7 @@ const ScheduleGenerator = () => {
 
     // Step 3: Course Config
     const [selectedCourseForConfig, setSelectedCourseForConfig] = useState(null);
-    const [courseConfigs, setCourseConfigs] = useState([]);    // Step 4: Constraints
+    const [courseConfigs, setCourseConfigs] = useState([]); // Step 4: Constraints
     const [constraints, setConstraints] = useState([]);
     const [teachers] = useState([
         { id: 1, name: "Giảng viên A" },
@@ -475,7 +471,8 @@ const ScheduleGenerator = () => {
                         }
                         week++;
                     }
-                });            }); // Prepare schedule generation parameters
+                });
+            }); // Prepare schedule generation parameters
             let scheduleParams = {
                 department_id: selectedDepartment,
                 start_date: startDate.format("YYYY-MM-DD"),
@@ -738,7 +735,8 @@ const ScheduleGenerator = () => {
             default:
                 return "Unknown step";
         }
-    };    return (
+    };
+    return (
         <Container maxWidth="lg" sx={{ mt: 4, mb: 8 }} data-intro="schedule-generator-main">
             <Paper elevation={3} sx={{ p: 3 }}>
                 <Typography variant="h4" align="center" gutterBottom data-intro="schedule-generator-title">
@@ -756,22 +754,22 @@ const ScheduleGenerator = () => {
                             <Alert severity="warning" sx={{ mb: 3 }}>
                                 {dataError}
                             </Alert>
-                        )}                        <Stepper activeStep={activeStep} sx={{ pt: 3, pb: 5 }} data-intro="schedule-steps">
+                        )}{" "}
+                        <Stepper activeStep={activeStep} sx={{ pt: 3, pb: 5 }} data-intro="schedule-steps">
                             {steps.map((label) => (
                                 <Step key={label}>
                                     <StepLabel>{label}</StepLabel>
                                 </Step>
                             ))}
                         </Stepper>
-
                         {error && (
                             <Alert severity="error" sx={{ mb: 3 }}>
                                 {error}
                             </Alert>
                         )}
-
-                        <Box sx={{ mb: 2 }} data-intro="schedule-config">{getStepContent(activeStep)}</Box>
-
+                        <Box sx={{ mb: 2 }} data-intro="schedule-config">
+                            {getStepContent(activeStep)}
+                        </Box>
                         <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
                             {activeStep !== 0 && (
                                 <Button onClick={handleBack} sx={{ mr: 1 }}>

@@ -56,10 +56,10 @@ function App() {
     // Auto-start intro tour for first-time users
     useEffect(() => {
         // Check if this is the first visit and no tours have been completed
-        if (!isTourCompleted('dashboard') && !isTourCompleted('quick')) {
+        if (!isTourCompleted("dashboard") && !isTourCompleted("quick")) {
             // Small delay to ensure components are loaded
             const timer = setTimeout(() => {
-                startTour('quick');
+                startTour("quick");
             }, 1000);
 
             return () => clearTimeout(timer);

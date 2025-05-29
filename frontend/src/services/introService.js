@@ -1,5 +1,5 @@
-import introJs from 'intro.js';
-import 'intro.js/introjs.css';
+import introJs from "intro.js";
+import "intro.js/introjs.css";
 
 class IntroService {
     constructor() {
@@ -9,18 +9,18 @@ class IntroService {
 
     setupDefaultOptions() {
         this.intro.setOptions({
-            nextLabel: 'Tiếp theo →',
-            prevLabel: '← Quay lại',
-            skipLabel: 'Bỏ qua',
-            doneLabel: 'Hoàn thành',
+            nextLabel: "Tiếp theo →",
+            prevLabel: "← Quay lại",
+            skipLabel: "Bỏ qua",
+            doneLabel: "Hoàn thành",
             showProgress: true,
             showBullets: false,
             exitOnOverlayClick: false,
             exitOnEsc: true,
             keyboardNavigation: true,
             disableInteraction: false,
-            highlightClass: 'introjs-highlight',
-            hintButtonLabel: 'OK',
+            highlightClass: "introjs-highlight",
+            hintButtonLabel: "OK",
         });
     }
 
@@ -34,7 +34,7 @@ class IntroService {
                         <p>Chúng tôi sẽ hướng dẫn bạn sử dụng các tính năng chính của hệ thống.</p>
                         <img src="/TCDKTTT.png" alt="Logo" style="width: 80px; margin: 10px 0;" />
                     </div>
-                `
+                `,
             },
             {
                 element: '[data-intro="navigation"]',
@@ -48,7 +48,7 @@ class IntroService {
                         <li><strong>Lớp học:</strong> Quản lý lớp học</li>
                         <li><strong>Lịch học:</strong> Xem và tạo lịch học</li>
                     </ul>
-                `
+                `,
             },
             {
                 element: '[data-intro="dashboard-stats"]',
@@ -61,19 +61,19 @@ class IntroService {
                         <li>Tổng số lớp học</li>
                         <li>Số lịch học đã tạo</li>
                     </ul>
-                `
+                `,
             },
             {
                 element: '[data-intro="recent-activity"]',
                 intro: `
                     <h4>🕒 Hoạt động gần đây</h4>
                     <p>Theo dõi các hoạt động và thay đổi mới nhất trong hệ thống.</p>
-                `
-            }
+                `,
+            },
         ];
 
         this.intro.setOptions({
-            steps: steps
+            steps: steps,
         });
 
         return this.intro.start();
@@ -88,21 +88,21 @@ class IntroService {
                         <h3>📚 Quản lý Môn học</h3>
                         <p>Hướng dẫn quản lý môn học và cấu hình chi tiết.</p>
                     </div>
-                `
+                `,
             },
             {
                 element: '[data-intro="course-list"]',
                 intro: `
                     <h4>📋 Danh sách môn học</h4>
                     <p>Xem tất cả môn học trong hệ thống với thông tin cơ bản như mã môn, tên môn, khoa, và số tiết.</p>
-                `
+                `,
             },
             {
                 element: '[data-intro="add-course-btn"]',
                 intro: `
                     <h4>➕ Thêm môn học mới</h4>
                     <p>Nhấn nút này để thêm môn học mới với giao diện tab được cải tiến.</p>
-                `
+                `,
             },
             {
                 element: '[data-intro="course-tabs"]',
@@ -113,7 +113,7 @@ class IntroService {
                         <li><strong>Tab 1:</strong> Thông tin cơ bản (mã môn, tên, khoa, số tiết)</li>
                         <li><strong>Tab 2:</strong> Cấu hình chi tiết (ghép lớp, lý thuyết/thực hành, lịch thi)</li>
                     </ul>
-                `
+                `,
             },
             {
                 element: '[data-intro="course-config"]',
@@ -127,12 +127,12 @@ class IntroService {
                         <li>Lịch kiểm tra và thi</li>
                         <li>Yêu cầu đặc biệt (V30/V31)</li>
                     </ul>
-                `
-            }
+                `,
+            },
         ];
 
         this.intro.setOptions({
-            steps: steps
+            steps: steps,
         });
 
         return this.intro.start();
@@ -147,7 +147,7 @@ class IntroService {
                         <h3>📅 Tạo lịch học</h3>
                         <p>Hướng dẫn quy trình tạo lịch học tự động.</p>
                     </div>
-                `
+                `,
             },
             {
                 element: '[data-intro="schedule-steps"]',
@@ -161,7 +161,7 @@ class IntroService {
                         <li>Thiết lập ràng buộc</li>
                         <li>Xem tóm tắt và tạo lịch</li>
                     </ol>
-                `
+                `,
             },
             {
                 element: '[data-intro="schedule-config"]',
@@ -174,12 +174,12 @@ class IntroService {
                         <li>Tùy chọn thời gian toàn cục</li>
                     </ul>
                     <p><strong>Lưu ý:</strong> Cấu hình chi tiết cho từng môn học được thực hiện trong phần Quản lý môn học.</p>
-                `
-            }
+                `,
+            },
         ];
 
         this.intro.setOptions({
-            steps: steps
+            steps: steps,
         });
 
         return this.intro.start();
@@ -194,7 +194,7 @@ class IntroService {
                         <h3>🚀 Tính năng nổi bật</h3>
                         <p>Khám phá các tính năng mới được cải tiến!</p>
                     </div>
-                `
+                `,
             },
             {
                 element: '[data-intro="navigation"]',
@@ -206,7 +206,7 @@ class IntroService {
                         <li><strong>Tạo lịch học:</strong> Cấu hình chung cho toàn hệ thống</li>
                         <li><strong>Giao diện Tab:</strong> Dễ sử dụng và có tổ chức</li>
                     </ul>
-                `
+                `,
             },
             {
                 intro: `
@@ -215,12 +215,12 @@ class IntroService {
                         <p>Bạn đã sẵn sàng sử dụng hệ thống. Chúc bạn làm việc hiệu quả!</p>
                         <p><small>💡 Bạn có thể xem lại hướng dẫn bất kỳ lúc nào từ menu trợ giúp.</small></p>
                     </div>
-                `
-            }
+                `,
+            },
         ];
 
         this.intro.setOptions({
-            steps: steps
+            steps: steps,
         });
 
         return this.intro.start();
@@ -229,7 +229,7 @@ class IntroService {
     // Custom tour with provided steps
     startCustomTour(steps) {
         this.intro.setOptions({
-            steps: steps
+            steps: steps,
         });
 
         return this.intro.start();

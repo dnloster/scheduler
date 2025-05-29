@@ -66,7 +66,8 @@ const Dashboard = () => {
             icon: <EventIcon fontSize="large" color="primary" />,
             link: "/events",
         },
-    ];    return (
+    ];
+    return (
         <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }} data-intro="dashboard-main">
             <Typography variant="h4" gutterBottom component="div" data-intro="dashboard-title">
                 Bảng điều khiển

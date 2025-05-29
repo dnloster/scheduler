@@ -1,19 +1,19 @@
 import React, { useState } from "react";
 import { Link as RouterLink, useLocation } from "react-router-dom";
-import { 
-    Box, 
-    Drawer, 
-    List, 
-    ListItem, 
-    ListItemIcon, 
-    ListItemText, 
-    Typography, 
-    Divider, 
+import {
+    Box,
+    Drawer,
+    List,
+    ListItem,
+    ListItemIcon,
+    ListItemText,
+    Typography,
+    Divider,
     Button,
     Menu,
     MenuItem,
     IconButton,
-    Tooltip
+    Tooltip,
 } from "@mui/material";
 import {
     Dashboard as DashboardIcon,
@@ -25,7 +25,7 @@ import {
     CalendarViewMonth as ScheduleIcon,
     Help as HelpIcon,
     PlayArrow as PlayArrowIcon,
-    Refresh as RefreshIcon
+    Refresh as RefreshIcon,
 } from "@mui/icons-material";
 import { useIntroTour } from "../../hooks/useIntroTour";
 
@@ -54,7 +54,7 @@ const Navbar = () => {
         handleHelpMenuClose();
         resetTours();
         // Start quick tour after reset
-        setTimeout(() => startTour('quick'), 500);
+        setTimeout(() => startTour("quick"), 500);
     };
 
     const menuItems = [
@@ -65,7 +65,8 @@ const Navbar = () => {
         { text: "Môn học", icon: <BookIcon />, path: "/courses" },
         { text: "Sự kiện", icon: <EventIcon />, path: "/events" },
         { text: "Ràng buộc", icon: <SettingsIcon />, path: "/constraints" },
-    ];    return (
+    ];
+    return (
         <Drawer
             variant="permanent"
             data-intro="navigation"
@@ -120,49 +121,50 @@ const Navbar = () => {
                             }}
                         />
                     </ListItem>
-                ))}            </List>
+                ))}{" "}
+            </List>
 
             <Divider />
-            
+
             {/* Help Menu */}
             <Box sx={{ p: 2 }}>
                 <Tooltip title="Trợ giúp & Hướng dẫn">
                     <IconButton
                         onClick={handleHelpMenuOpen}
-                        sx={{ 
-                            mb: 1, 
-                            width: '100%',
-                            justifyContent: 'flex-start',
+                        sx={{
+                            mb: 1,
+                            width: "100%",
+                            justifyContent: "flex-start",
                             gap: 1,
-                            color: 'text.secondary'
+                            color: "text.secondary",
                         }}
                     >
                         <HelpIcon />
                         <Typography variant="body2">Trợ giúp</Typography>
                     </IconButton>
                 </Tooltip>
-                
+
                 <Menu
                     anchorEl={helpMenuAnchor}
                     open={Boolean(helpMenuAnchor)}
                     onClose={handleHelpMenuClose}
                     PaperProps={{
-                        sx: { minWidth: 200 }
+                        sx: { minWidth: 200 },
                     }}
                 >
-                    <MenuItem onClick={() => handleStartTour('quick')}>
+                    <MenuItem onClick={() => handleStartTour("quick")}>
                         <PlayArrowIcon sx={{ mr: 1 }} fontSize="small" />
                         Hướng dẫn nhanh
                     </MenuItem>
-                    <MenuItem onClick={() => handleStartTour('dashboard')}>
+                    <MenuItem onClick={() => handleStartTour("dashboard")}>
                         <DashboardIcon sx={{ mr: 1 }} fontSize="small" />
                         Hướng dẫn Dashboard
                     </MenuItem>
-                    <MenuItem onClick={() => handleStartTour('course')}>
+                    <MenuItem onClick={() => handleStartTour("course")}>
                         <BookIcon sx={{ mr: 1 }} fontSize="small" />
                         Hướng dẫn Môn học
                     </MenuItem>
-                    <MenuItem onClick={() => handleStartTour('schedule')}>
+                    <MenuItem onClick={() => handleStartTour("schedule")}>
                         <ScheduleIcon sx={{ mr: 1 }} fontSize="small" />
                         Hướng dẫn Tạo lịch
                     </MenuItem>

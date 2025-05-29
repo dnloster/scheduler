@@ -196,10 +196,13 @@ const CourseList = () => {
     const getParentCourseName = (parentId) => {
         const parentCourse = courses.find((c) => c._id === parentId);
         return parentCourse ? parentCourse.name : "Unknown";
-    };    return (
+    };
+    return (
         <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }} data-intro="course-list-main">
             <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-                <Typography variant="h4" data-intro="course-list-title">Môn học</Typography>
+                <Typography variant="h4" data-intro="course-list-title">
+                    Môn học
+                </Typography>
                 <Box>
                     <Button variant="outlined" onClick={toggleViewType} sx={{ mr: 2 }}>
                         {viewType === "grid" ? "Xem dạng bảng" : "Xem dạng lưới"}
