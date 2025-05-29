@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
     Container,
@@ -38,6 +38,7 @@ import {
     Book as BookIcon,
     School as SchoolIcon,
     Timer as TimerIcon,
+    Info as InfoIcon,
     Edit as EditIcon,
     Bookmark as BookmarkIcon,
     Settings as SettingsIcon,
@@ -166,7 +167,7 @@ const CourseForm = () => {
             setLoading(true);
             fetchCourseData();
         }
-    }, [id, isEditMode, fetchCourseData]);
+    }, [id, isEditMode]);
 
     const fetchCourseData = async () => {
         setLoading(true);
@@ -348,7 +349,9 @@ const CourseForm = () => {
             ...prev,
             constraints: config,
         }));
-    };    // Handle tab change
+    };
+
+    // Handle tab change
     const handleTabChange = (event, newValue) => {
         setActiveTab(newValue);
     };
@@ -367,8 +370,13 @@ const CourseForm = () => {
                 setError("Không thể xóa môn học. Vui lòng thử lại sau.");
             }
         }
-    };return (
-        <Container maxWidth="md" sx={{ mt: 4, mb: 4 }} data-intro="course-form-main">
+    };
+
+    // Calculate the ratio for the progress bar
+    const theoryHoursRatio = course.total_hours > 0 ? Math.round((course.theory_hours / course.total_hours) * 100) : 0;
+
+    return (
+        <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
             <Zoom in={true} style={{ transitionDelay: "100ms" }}>
                 <Paper
                     elevation={3}
@@ -435,8 +443,9 @@ const CourseForm = () => {
 
                     {!loading && (
                         <Fade in={true} timeout={800}>
-                            <Box component="form" onSubmit={handleSubmit}>                                {/* Tabs for Basic Info and Configuration */}
-                                <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 3 }} data-intro="course-tabs">
+                            <Box component="form" onSubmit={handleSubmit}>
+                                {/* Tabs for Basic Info and Configuration */}
+                                <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 3 }}>
                                     <Tabs value={activeTab} onChange={handleTabChange} aria-label="course form tabs">
                                         <Tab
                                             icon={<BookIcon />}
@@ -449,7 +458,6 @@ const CourseForm = () => {
                                             label="Cấu hình môn học"
                                             id="tab-1"
                                             aria-controls="tabpanel-1"
-                                            data-intro="course-config"
                                         />
                                     </Tabs>
                                 </Box>

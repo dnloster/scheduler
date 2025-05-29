@@ -17,16 +17,13 @@ import dayjs from "dayjs";
 // Import API services
 import { getDepartments } from "../../api/departmentService";
 import { getClasses } from "../../api/classService";
-import { getCourses } from "../../api/courseService";
+import { getCourses, updateCourse } from "../../api/courseService";
 import { generateSchedule } from "../../api/scheduleService";
 import { createEvent, getEvents } from "../../api/eventService";
 
 // Import helpers
 import {
-    getObjectId,
-    isObjectIdLike,
     mapClassesById,
-    validateScheduleDetails,
     findClassId,
     findCourseId,
 } from "../../utils/objectIdHelper";
@@ -61,11 +58,9 @@ const ScheduleGenerator = () => {
 
     // Step 3: Course Config
     const [selectedCourseForConfig, setSelectedCourseForConfig] = useState(null);
-    const [courseConfigs, setCourseConfigs] = useState([]);
-
-    // Step 4: Constraints
+    const [courseConfigs, setCourseConfigs] = useState([]);    // Step 4: Constraints
     const [constraints, setConstraints] = useState([]);
-    const [teachers, setTeachers] = useState([
+    const [teachers] = useState([
         { id: 1, name: "Giảng viên A" },
         { id: 2, name: "Giảng viên B" },
         { id: 3, name: "Giảng viên C" },
@@ -240,13 +235,50 @@ const ScheduleGenerator = () => {
     const handleRemoveCustomEvent = (id) => {
         setCustomEvents(customEvents.filter((event) => event.id !== id));
     };
-
-    const handleUpdateCourseConfig = (id, field, value) => {
+    const handleUpdateCourseConfig = async (id, field, value) => {
+        // Update local state immediately for responsive UI
         setCourseConfigs((prevConfigs) =>
             prevConfigs.map((config) => {
                 return config.id === id ? { ...config, [field]: value } : config;
             })
         );
+
+        // Save to database if it's a constraint field
+        const constraintFields = [
+            "maxHoursPerWeek",
+            "maxHoursPerDay",
+            "maxMorningHours",
+            "maxAfternoonHours",
+            "minDaysBeforeExam",
+            "examDuration",
+            "totalHours",
+            "theory_hours",
+            "practical_hours",
+        ];
+
+        if (constraintFields.includes(field)) {
+            try {
+                // Map frontend field names to backend field names
+                const fieldMapping = {
+                    maxHoursPerWeek: "max_hours_per_week",
+                    maxHoursPerDay: "max_hours_per_day",
+                    maxMorningHours: "max_morning_hours",
+                    maxAfternoonHours: "max_afternoon_hours",
+                    minDaysBeforeExam: "min_days_before_exam",
+                    examDuration: "exam_duration",
+                    totalHours: "total_hours",
+                };
+
+                const backendField = fieldMapping[field] || field;
+                const updateData = { [backendField]: value };
+
+                await updateCourse(id, updateData);
+                console.log(`Saved ${field} = ${value} for course ${id}`);
+            } catch (error) {
+                console.error("Failed to save course configuration:", error);
+                // Optionally show user notification about save failure
+            }
+        }
     };
 
     const handleGenerateSchedule = async () => {
@@ -443,9 +475,8 @@ const ScheduleGenerator = () => {
                         }
                         week++;
                     }
-                });
-            }); // Prepare schedule generation parameters
-            const scheduleParams = {
+                });            }); // Prepare schedule generation parameters
+            let scheduleParams = {
                 department_id: selectedDepartment,
                 start_date: startDate.format("YYYY-MM-DD"),
                 end_date: endDate.format("YYYY-MM-DD"),
@@ -707,12 +738,10 @@ const ScheduleGenerator = () => {
             default:
                 return "Unknown step";
         }
-    };
-
-    return (
-        <Container maxWidth="lg" sx={{ mt: 4, mb: 8 }}>
+    };    return (
+        <Container maxWidth="lg" sx={{ mt: 4, mb: 8 }} data-intro="schedule-generator-main">
             <Paper elevation={3} sx={{ p: 3 }}>
-                <Typography variant="h4" align="center" gutterBottom>
+                <Typography variant="h4" align="center" gutterBottom data-intro="schedule-generator-title">
                     Tạo lịch học
                 </Typography>
 
@@ -727,9 +756,7 @@ const ScheduleGenerator = () => {
                             <Alert severity="warning" sx={{ mb: 3 }}>
                                 {dataError}
                             </Alert>
-                        )}
-
-                        <Stepper activeStep={activeStep} sx={{ pt: 3, pb: 5 }}>
+                        )}                        <Stepper activeStep={activeStep} sx={{ pt: 3, pb: 5 }} data-intro="schedule-steps">
                             {steps.map((label) => (
                                 <Step key={label}>
                                     <StepLabel>{label}</StepLabel>
@@ -743,7 +770,7 @@ const ScheduleGenerator = () => {
                             </Alert>
                         )}
 
-                        <Box sx={{ mb: 2 }}>{getStepContent(activeStep)}</Box>
+                        <Box sx={{ mb: 2 }} data-intro="schedule-config">{getStepContent(activeStep)}</Box>
 
                         <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
                             {activeStep !== 0 && (

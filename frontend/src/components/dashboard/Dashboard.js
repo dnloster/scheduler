@@ -8,7 +8,6 @@ import {
     Event as EventIcon,
     CalendarMonth as CalendarIcon,
 } from "@mui/icons-material";
-import axios from "axios";
 
 const Dashboard = () => {
     const [stats, setStats] = useState({
@@ -67,15 +66,13 @@ const Dashboard = () => {
             icon: <EventIcon fontSize="large" color="primary" />,
             link: "/events",
         },
-    ];
-
-    return (
-        <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-            <Typography variant="h4" gutterBottom component="div">
+    ];    return (
+        <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }} data-intro="dashboard-main">
+            <Typography variant="h4" gutterBottom component="div" data-intro="dashboard-title">
                 Bảng điều khiển
             </Typography>
 
-            <Grid container spacing={3}>
+            <Grid container spacing={3} data-intro="dashboard-stats">
                 {statCards.map((card) => (
                     <Grid size={{ xs: 12, sm: 6, md: 4 }} key={card.id}>
                         <Card>
@@ -100,7 +97,7 @@ const Dashboard = () => {
                 ))}
             </Grid>
 
-            <Box mt={4}>
+            <Box mt={4} data-intro="dashboard-schedule-generator">
                 <Paper elevation={3} sx={{ p: 3 }}>
                     <Typography variant="h5" gutterBottom>
                         Tạo lịch học mới
@@ -117,7 +114,7 @@ const Dashboard = () => {
                 </Paper>
             </Box>
 
-            <Box mt={4}>
+            <Box mt={4} data-intro="dashboard-guide">
                 <Paper elevation={3} sx={{ p: 3 }}>
                     <Typography variant="h5" gutterBottom>
                         Hướng dẫn sử dụng

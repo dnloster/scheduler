@@ -47,6 +47,7 @@ const Schedule = () => {
     const [startDate, setStartDate] = useState(null);
     const [endDate, setEndDate] = useState(null);
     const [showSelfStudy, setShowSelfStudy] = useState(true); // Add state for self-study visibility
+    const [totalWeeks, setTotalWeeks] = useState(50); // State for total weeks from schedule data
 
     // Tải dữ liệu ban đầu
     useEffect(() => {
@@ -65,13 +66,20 @@ const Schedule = () => {
 
                 // Xác định ngày bắt đầu từ tháng 6
                 const defaultStartDate = new Date("2025-06-09"); // Bắt đầu từ ngày 9 tháng 6
-                setStartDate(defaultStartDate);
-
-                // Tải lịch học từ ngày mặc định
+                setStartDate(defaultStartDate); // Tải lịch học từ ngày mặc định
                 const schedulesResponse = await getSchedules({
                     actual_start_date: defaultStartDate.toISOString().split("T")[0],
                 });
                 setSchedules(schedulesResponse || []);
+
+                // Calculate total weeks from schedule data
+                if (schedulesResponse && schedulesResponse.length > 0) {
+                    const weeks = [...new Set(schedulesResponse.map((s) => s.week_number))];
+                    const maxWeek = Math.max(...weeks);
+                    if (maxWeek > 0) {
+                        setTotalWeeks(maxWeek);
+                    }
+                }
 
                 // Xác định ngày bắt đầu và kết thúc từ dữ liệu lịch học
                 if (schedulesResponse && schedulesResponse.length > 0) {
@@ -120,6 +128,15 @@ const Schedule = () => {
                 console.log("Mẫu lịch học đầu tiên:", schedulesResponse?.[0]);
                 setSchedules(schedulesResponse || []);
 
+                // Calculate total weeks from schedule data
+                if (schedulesResponse && schedulesResponse.length > 0) {
+                    const weeks = [...new Set(schedulesResponse.map((s) => s.week_number))];
+                    const maxWeek = Math.max(...weeks);
+                    if (maxWeek > 0) {
+                        setTotalWeeks(maxWeek);
+                    }
+                }
+
                 // Cập nhật ngày bắt đầu và kết thúc
                 if (schedulesResponse && schedulesResponse.length > 0) {
                     const dates = schedulesResponse.filter((s) => s.actual_date).map((s) => new Date(s.actual_date));
@@ -157,12 +174,8 @@ const Schedule = () => {
         setTabValue(newValue);
         // Mỗi tab hiển thị WEEKS_TO_SHOW tuần, nên tính tuần bắt đầu dựa vào tab được chọn
         setStartWeek(newValue * WEEKS_TO_SHOW + 1);
-    };
-
-    // Tạo các tabs cho tuần học
+    }; // Tạo các tabs cho tuần học
     const scheduleTabs = useMemo(() => {
-        // Giả sử có tổng cộng 50 tuần
-        const totalWeeks = 50;
         const tabCount = Math.ceil(totalWeeks / WEEKS_TO_SHOW);
 
         return (
@@ -170,24 +183,21 @@ const Schedule = () => {
                 {Array.from({ length: tabCount }).map((_, index) => {
                     const start = index * WEEKS_TO_SHOW + 1;
                     const end = Math.min((index + 1) * WEEKS_TO_SHOW, totalWeeks);
-                    return <Tab key={index} label={`Tuần ${start}-${end}`} />;
+                    return <Tab key={`week-tab-${index}`} label={`Tuần ${start}-${end}`} />;
                 })}
             </Tabs>
         );
-    }, [tabValue]);
-
-    // Tính toán các tuần hiển thị
+    }, [tabValue, totalWeeks]); // Tính toán các tuần hiển thị
     const displayWeeks = useMemo(() => {
         const weeks = [];
         for (let i = 0; i < WEEKS_TO_SHOW; i++) {
             const weekNumber = startWeek + i;
-            if (weekNumber <= 50) {
-                // Giả sử tối đa 50 tuần
+            if (weekNumber <= totalWeeks) {
                 weeks.push(weekNumber);
             }
         }
         return weeks;
-    }, [startWeek]);
+    }, [startWeek, totalWeeks]);
 
     // Tìm thông tin lịch học cho một lớp, tiết và ngày cụ thể
     const getScheduleForClassPeriodDay = useCallback(
@@ -265,15 +275,11 @@ const Schedule = () => {
         (classId, period, date) => {
             const schedule = getScheduleForClassPeriodDay(classId, period, date);
 
-            // Kiểm tra xem ngày có phải là ngày lễ không
-            const isHolidayDate = isHoliday(date);
-
             // Kiểm tra xem có phải là ngày chào cờ (thứ 2 đầu tháng) không
             const isFlagDay = isFlagCeremonyDay(date);
-
             if (!schedule) {
                 // Hiển thị biểu tượng đặc biệt cho ngày lễ và chào cờ ngay cả khi không có lịch
-                if (isHolidayDate) {
+                if (isHoliday(date)) {
                     return (
                         <Box
                             sx={{
@@ -313,11 +319,12 @@ const Schedule = () => {
                 return null;
             }
 
-            // Kiểm tra xem đây có phải là ngày lễ/sự kiện đặc biệt không
+            // Kiểm tra các loại sự kiện đặc biệt
             const isSpecialEvent = !!schedule.special_event || schedule.is_special_day;
             const isSelfStudy = schedule.is_self_study;
             const isFlagCeremony = schedule.is_flag_ceremony || (isFlagDay && period >= 1 && period <= 2); // Chỉ chào cờ tiết 1-2
-            const isCanceled = schedule.is_canceled; // Xác định màu sắc ô dựa vào loại lịch học
+            const isMaintenance = schedule.is_maintenance;
+            const isBreak = schedule.is_break;
 
             // Skip rendering self-study periods if showSelfStudy is false
             if (isSelfStudy && !showSelfStudy) {
@@ -326,13 +333,22 @@ const Schedule = () => {
             let bgColor = "#ffffff"; // Tất cả các ô đều có nền trắng
             let textStyle = {};
 
-            if (isSpecialEvent || isHolidayDate) {
+            if (isSpecialEvent || isHoliday(date)) {
                 textStyle.color = "#f44336"; // Văn bản màu đỏ cho sự kiện đặc biệt
+            } else if (isMaintenance) {
+                textStyle.color = "#ff9800"; // Màu cam cho thời gian bảo quản
+                textStyle.fontWeight = "bold";
+            } else if (isBreak) {
+                textStyle.color = "#9c27b0"; // Màu tím cho tuần nghỉ
+                textStyle.fontWeight = "bold";
             } else if (isSelfStudy) {
-                textStyle.fontStyle = "italic"; // Chữ nghiêng cho tiết tự học
+                // Tiết tự học chỉ hiển thị "Ôn", không có gạch chân hay chữ nghiêng
+                // (styling đã bỏ fontStyle italic)
             } else if (schedule.is_practical) {
                 textStyle.textDecoration = "underline"; // Gạch chân cho tiết thực hành
-            } // Hiển thị mã môn học hoặc biểu tượng đặc biệt
+            }
+
+            // Hiển thị mã môn học hoặc biểu tượng đặc biệt
             return (
                 <Box
                     sx={{
@@ -347,15 +363,44 @@ const Schedule = () => {
                         p: 0.5,
                         border: schedule.is_exam ? "1px solid red" : "none",
                         ...textStyle,
-                        textDecoration: isCanceled ? "line-through" : textStyle.textDecoration || "none",
+                        position: "relative", // Để có thể đặt tam giác ở góc
                     }}
                 >
-                    {" "}
+                    {/* Tam giác màu đen ở góc trên bên trái cho tiết thi */}
+                    {schedule.is_exam && (
+                        <Box
+                            sx={{
+                                position: "absolute",
+                                top: 0,
+                                left: 0,
+                                width: 0,
+                                height: 0,
+                                borderTop: "8px solid #000000",
+                                borderRight: "8px solid transparent",
+                                zIndex: 1,
+                            }}
+                        />
+                    )}{" "}
                     {isFlagCeremony ? (
                         <StarIcon color="error" fontSize="small" />
+                    ) : isMaintenance ? (
+                        <Tooltip title={schedule.notes || "Bảo quản thiết bị"}>
+                            <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                <Typography variant="caption" sx={{ fontSize: "0.7rem", fontWeight: "bold" }}>
+                                    Bảo quản
+                                </Typography>
+                            </Box>
+                        </Tooltip>
+                    ) : isBreak ? (
+                        <Tooltip title={schedule.notes || "Tuần nghỉ"}>
+                            <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                <Typography variant="caption" sx={{ fontSize: "0.7rem", fontWeight: "bold" }}>
+                                    Nghỉ
+                                </Typography>
+                            </Box>
+                        </Tooltip>
                     ) : (
                         <>
-                            {" "}
                             {isSelfStudy ? "Ôn" : schedule.course_code || ""}
                             {schedule.is_exam && (
                                 <Tooltip title={schedule.notes || "Thi"}>
@@ -370,11 +415,6 @@ const Schedule = () => {
                                 </Tooltip>
                             )}
                             {isSpecialEvent && <EventIcon color="secondary" fontSize="small" sx={{ ml: 0.5 }} />}
-                            {isCanceled && (
-                                <span role="img" aria-label="canceled" style={{ marginLeft: "4px" }}>
-                                    ❌
-                                </span>
-                            )}
                         </>
                     )}
                 </Box>
@@ -549,9 +589,9 @@ const Schedule = () => {
                         </TableRow>
 
                         <TableRow>
+                            {" "}
                             {weeksWithDates.map((week) =>
                                 week.days.map((date, dayIndex) => {
-                                    const isHolidayDate = isHoliday(date);
                                     const day = date.getDate();
                                     const isWeekend = dayIndex === 5 || dayIndex === 6;
 
@@ -658,7 +698,16 @@ const Schedule = () => {
                     sx={{
                         backgroundColor: "#ffffff",
                         color: "#000000",
-                        fontStyle: "italic",
+                    }}
+                />
+            </Tooltip>
+            <Tooltip title="Thời gian bảo quản thiết bị">
+                <Chip
+                    label="Bảo quản"
+                    sx={{
+                        backgroundColor: "#ffffff",
+                        color: "#ff9800",
+                        fontWeight: "bold",
                     }}
                 />
             </Tooltip>
@@ -687,16 +736,7 @@ const Schedule = () => {
             </Tooltip>
             <Tooltip title="Kiểm tra/thi">
                 <Box display="flex" alignItems="center">
-                    <StarIcon color="error" fontSize="small" />
                     <Chip label="Kiểm tra/thi" sx={{ ml: 0.5, border: "1px solid red", backgroundColor: "#ffffff" }} />
-                </Box>
-            </Tooltip>
-            <Tooltip title="Giờ học bị hủy">
-                <Box display="flex" alignItems="center">
-                    <span role="img" aria-label="canceled" style={{ fontSize: "16px", marginRight: "4px" }}>
-                        ❌
-                    </span>
-                    <Chip label="Bị hủy" sx={{ backgroundColor: "#ffffff", textDecoration: "line-through" }} />
                 </Box>
             </Tooltip>
         </Box>

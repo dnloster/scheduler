@@ -1,10 +1,16 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import { CssBaseline, Box } from "@mui/material";
 import { LocalizationProvider } from "@mui/x-date-pickers";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import "dayjs/locale/vi";
+
+// Import IntroJS styles
+import "intro.js/introjs.css";
+
+// Import intro service
+import { useIntroTour } from "./hooks/useIntroTour";
 
 // Components
 import Navbar from "./components/layout/Navbar";
@@ -45,6 +51,20 @@ const theme = createTheme({
 const drawerWidth = 240;
 
 function App() {
+    const { isTourCompleted, startTour } = useIntroTour();
+
+    // Auto-start intro tour for first-time users
+    useEffect(() => {
+        // Check if this is the first visit and no tours have been completed
+        if (!isTourCompleted('dashboard') && !isTourCompleted('quick')) {
+            // Small delay to ensure components are loaded
+            const timer = setTimeout(() => {
+                startTour('quick');
+            }, 1000);
+
+            return () => clearTimeout(timer);
+        }
+    }, [isTourCompleted, startTour]);
     return (
         <ThemeProvider theme={theme}>
             <CssBaseline />

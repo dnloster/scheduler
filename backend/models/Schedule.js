@@ -56,6 +56,42 @@ const scheduleSchema = new mongoose.Schema({
     total_phases: {
         type: Number,
         default: 1,
+    }, // New fields for special events
+    is_maintenance: {
+        type: Boolean,
+        default: false,
+    },
+    is_break: {
+        type: Boolean,
+        default: false,
+    },
+    is_holiday: {
+        type: Boolean,
+        default: false,
+    },
+    is_special_day: {
+        type: Boolean,
+        default: false,
+    },
+    is_canceled: {
+        type: Boolean,
+        default: false,
+    },
+    is_flag_ceremony: {
+        type: Boolean,
+        default: false,
+    },
+    has_special_event: {
+        type: Boolean,
+        default: false,
+    },
+    event_type: {
+        type: String,
+        default: null,
+    },
+    special_event_name: {
+        type: String,
+        default: null,
     },
     created_at: {
         type: Date,

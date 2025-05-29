@@ -36,6 +36,26 @@ const courseConstraintSchema = new mongoose.Schema({
         type: Number,
         default: 1,
     },
+    // Fields for paired courses like V30/V31
+    is_paired_course: {
+        type: Boolean,
+        default: false,
+    },
+    paired_course: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Course",
+        default: null,
+    },
+    combined_total_hours: {
+        type: Number,
+        default: null, // Total hours for both courses combined (V30+V31 = 552)
+    },
+    phase_hour_thresholds: [
+        {
+            phase: Number,
+            cumulative_hours: Number, // Hours from both courses combined
+        },
+    ],
     grouped_classes: String, // Format: "1,2|3,4|5,6" for groups A-B, C-D, E-F
     notes: String,
     created_at: {

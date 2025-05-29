@@ -169,8 +169,8 @@ async function createExamSchedules() {
 
         // Create schedules for V30
         for (const classId of v30ClassIds) {
-            for (let week = 14; week <= 16; week++) {
-                for (let day = 1; day <= 2; day++) {
+            for (let week = 1; week <= 22; week++) {
+                for (let day = 1; day <= 5; day++) {
                     baseSchedules.push({
                         _id: new mongoose.Types.ObjectId(),
                         course_id: v30Course._id.toString(),
@@ -188,8 +188,8 @@ async function createExamSchedules() {
 
         // Create schedules for V31
         for (const classId of v31ClassIds) {
-            for (let week = 14; week <= 16; week++) {
-                for (let day = 3; day <= 4; day++) {
+            for (let week = 1; week <= 22; week++) {
+                for (let day = 1; day <= 5; day++) {
                     baseSchedules.push({
                         _id: new mongoose.Types.ObjectId(),
                         course_id: v31Course._id.toString(),
@@ -225,7 +225,7 @@ async function createExamSchedules() {
 
         // Generate exam schedules
         console.log("📝 Tạo lịch thi...");
-        const examSchedules = await constraintProcessor.applyExamConstraints(baseSchedules, examConfigs);
+        const examSchedules = await constraintProcessor.applyAllConstraints(baseSchedules, { courseExams: examConfigs });
 
         // Filter only exam schedules
         const exams = examSchedules.filter((schedule) => schedule.is_exam);

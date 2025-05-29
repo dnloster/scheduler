@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
     Container,
@@ -38,6 +38,7 @@ import {
     Book as BookIcon,
     School as SchoolIcon,
     Timer as TimerIcon,
+    Info as InfoIcon,
     Edit as EditIcon,
     Bookmark as BookmarkIcon,
     Settings as SettingsIcon,
@@ -55,7 +56,7 @@ const CourseForm = () => {
     const [error, setError] = useState(null);
     const [success, setSuccess] = useState(false);
     const [hasChildCourses, setHasChildCourses] = useState(false);
-
+    
     // Tab management
     const [activeTab, setActiveTab] = useState(0);
 
@@ -82,7 +83,7 @@ const CourseForm = () => {
         parent_course: null,
         constraints: null, // Course configuration data
     });
-
+    
     // Course configuration state
     const [courseConfiguration, setCourseConfiguration] = useState(null);
 
@@ -166,7 +167,7 @@ const CourseForm = () => {
             setLoading(true);
             fetchCourseData();
         }
-    }, [id, isEditMode, fetchCourseData]);
+    }, [id, isEditMode]);
 
     const fetchCourseData = async () => {
         setLoading(true);
@@ -183,11 +184,6 @@ const CourseForm = () => {
                     parent_course_id: courseData.parent_course?._id || courseData.parent_course,
                     is_subcourse: !!courseData.parent_course,
                 });
-
-                // Set configuration if exists
-                if (courseData.constraints) {
-                    setCourseConfiguration(courseData.constraints);
-                }
 
                 try {
                     const allCourses = await getCourses();
@@ -289,9 +285,7 @@ const CourseForm = () => {
                 [name]: checked,
             });
         }
-    };
-
-    const handleSubmit = async (e) => {
+    };    const handleSubmit = async (e) => {
         e.preventDefault();
 
         if (!validateForm()) {
@@ -340,15 +334,17 @@ const CourseForm = () => {
             setSaving(false);
         }
     };
-
+    
     // Handle configuration changes from CourseConfigurationForm
     const handleConfigurationChange = (config) => {
         setCourseConfiguration(config);
-        setCourse((prev) => ({
+        setCourse(prev => ({
             ...prev,
-            constraints: config,
+            constraints: config
         }));
-    };    // Handle tab change
+    };
+    
+    // Handle tab change
     const handleTabChange = (event, newValue) => {
         setActiveTab(newValue);
     };
@@ -367,8 +363,13 @@ const CourseForm = () => {
                 setError("Không thể xóa môn học. Vui lòng thử lại sau.");
             }
         }
-    };return (
-        <Container maxWidth="md" sx={{ mt: 4, mb: 4 }} data-intro="course-form-main">
+    };
+
+    // Calculate the ratio for the progress bar
+    const theoryHoursRatio = course.total_hours > 0 ? Math.round((course.theory_hours / course.total_hours) * 100) : 0;
+
+    return (
+        <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
             <Zoom in={true} style={{ transitionDelay: "100ms" }}>
                 <Paper
                     elevation={3}
@@ -431,254 +432,254 @@ const CourseForm = () => {
                                 {isEditMode ? "Cập nhật thành công!" : "Thêm mới thành công!"}
                             </Alert>
                         </Fade>
-                    )}
-
-                    {!loading && (
+                    )}                    {!loading && (
                         <Fade in={true} timeout={800}>
-                            <Box component="form" onSubmit={handleSubmit}>                                {/* Tabs for Basic Info and Configuration */}
-                                <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 3 }} data-intro="course-tabs">
+                            <Box component="form" onSubmit={handleSubmit}>
+                                {/* Tabs for Basic Info and Configuration */}
+                                <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
                                     <Tabs value={activeTab} onChange={handleTabChange} aria-label="course form tabs">
-                                        <Tab
-                                            icon={<BookIcon />}
-                                            label="Thông tin cơ bản"
+                                        <Tab 
+                                            icon={<BookIcon />} 
+                                            label="Thông tin cơ bản" 
                                             id="tab-0"
                                             aria-controls="tabpanel-0"
                                         />
-                                        <Tab
-                                            icon={<SettingsIcon />}
-                                            label="Cấu hình môn học"
+                                        <Tab 
+                                            icon={<SettingsIcon />} 
+                                            label="Cấu hình môn học" 
                                             id="tab-1"
                                             aria-controls="tabpanel-1"
-                                            data-intro="course-config"
                                         />
                                     </Tabs>
                                 </Box>
 
                                 {/* Tab Panel 0: Basic Information */}
-                                <Box role="tabpanel" hidden={activeTab !== 0} id="tabpanel-0" aria-labelledby="tab-0">
+                                <Box
+                                    role="tabpanel"
+                                    hidden={activeTab !== 0}
+                                    id="tabpanel-0"
+                                    aria-labelledby="tab-0"
+                                >
                                     {activeTab === 0 && (
-                                        <>
+                                        <Grid sx={{ xs: 12 }}>
                                             <Card
                                                 sx={{
                                                     mb: 2,
-                                                    backgroundColor: course.is_subcourse
-                                                        ? "rgba(238, 242, 255, 0.8)"
-                                                        : "white",
+                                                    backgroundColor: course.is_subcourse ? "rgba(238, 242, 255, 0.8)" : "white",
                                                     transition: "background-color 0.3s ease",
                                                     borderRadius: 2,
                                                 }}
                                             >
                                                 <CardContent>
-                                                    <Box
-                                                        display="flex"
-                                                        alignItems="center"
-                                                        justifyContent="space-between"
-                                                    >
-                                                        <FormControlLabel
-                                                            control={
-                                                                <Switch
-                                                                    checked={course.is_subcourse}
-                                                                    onChange={handleSwitchChange}
-                                                                    name="is_subcourse"
-                                                                    color="primary"
-                                                                />
-                                                            }
-                                                            label={
-                                                                <Box display="flex" alignItems="center" gap={1}>
-                                                                    <BookIcon
-                                                                        fontSize="small"
-                                                                        color={
-                                                                            course.is_subcourse ? "primary" : "action"
-                                                                        }
-                                                                    />
-                                                                    <Typography>
-                                                                        {course.is_subcourse
-                                                                            ? "Môn học con"
-                                                                            : "Môn học chính"}
-                                                                    </Typography>
-                                                                </Box>
-                                                            }
+                                            <Box display="flex" alignItems="center" justifyContent="space-between">
+                                                <FormControlLabel
+                                                    control={
+                                                        <Switch
+                                                            checked={course.is_subcourse}
+                                                            onChange={handleSwitchChange}
+                                                            name="is_subcourse"
+                                                            color="primary"
                                                         />
-                                                        <Chip
-                                                            icon={
-                                                                course.is_subcourse ? (
-                                                                    <BookmarkIcon fontSize="small" />
-                                                                ) : (
-                                                                    <BookIcon fontSize="small" />
-                                                                )
-                                                            }
-                                                            label={
-                                                                course.is_subcourse
-                                                                    ? "Thuộc môn học chính"
-                                                                    : "Môn học độc lập"
-                                                            }
-                                                            color={course.is_subcourse ? "info" : "default"}
-                                                            variant="outlined"
-                                                        />
-                                                    </Box>
+                                                    }
+                                                    label={
+                                                        <Box display="flex" alignItems="center" gap={1}>
+                                                            <BookIcon
+                                                                fontSize="small"
+                                                                color={course.is_subcourse ? "primary" : "action"}
+                                                            />
+                                                            <Typography>
+                                                                {course.is_subcourse ? "Môn học con" : "Môn học chính"}
+                                                            </Typography>
+                                                        </Box>
+                                                    }
+                                                />
+                                                <Chip
+                                                    icon={
+                                                        course.is_subcourse ? (
+                                                            <BookmarkIcon fontSize="small" />
+                                                        ) : (
+                                                            <BookIcon fontSize="small" />
+                                                        )
+                                                    }
+                                                    label={
+                                                        course.is_subcourse ? "Thuộc môn học chính" : "Môn học độc lập"
+                                                    }
+                                                    color={course.is_subcourse ? "info" : "default"}
+                                                    variant="outlined"
+                                                />
+                                            </Box>
 
-                                                    {course.is_subcourse && (
-                                                        <Fade in={course.is_subcourse}>
-                                                            <FormControl
-                                                                fullWidth
-                                                                error={!!errors.parent_course_id}
-                                                                sx={{ mt: 2, animation: "fadeIn 0.5s ease" }}
-                                                            >
-                                                                <InputLabel id="parent-course-label">
-                                                                    Môn học chính
-                                                                </InputLabel>
-                                                                <Select
-                                                                    labelId="parent-course-label"
-                                                                    value={
-                                                                        course.parent_course_id ||
-                                                                        course.parent_course ||
-                                                                        ""
-                                                                    }
-                                                                    name="parent_course_id"
-                                                                    label="Môn học chính"
-                                                                    onChange={handleInputChange}
-                                                                    disabled={loadingMainCourses}
-                                                                    endAdornment={
-                                                                        loadingMainCourses && (
-                                                                            <CircularProgress
-                                                                                size={20}
-                                                                                sx={{ mr: 2 }}
-                                                                            />
-                                                                        )
-                                                                    }
-                                                                >
-                                                                    {mainCourses.map((mainCourse) => (
-                                                                        <MenuItem
-                                                                            key={mainCourse._id || mainCourse.id}
-                                                                            value={mainCourse._id || mainCourse.id}
-                                                                        >
-                                                                            {mainCourse.code} - {mainCourse.name}
-                                                                        </MenuItem>
-                                                                    ))}
-                                                                </Select>
-                                                                {errors.parent_course_id && (
-                                                                    <FormHelperText error>
-                                                                        {errors.parent_course_id}
-                                                                    </FormHelperText>
-                                                                )}
-                                                            </FormControl>
-                                                        </Fade>
-                                                    )}
-                                                </CardContent>
-                                            </Card>
-
-                                            <Divider sx={{ my: 3 }} />
-
-                                            <Grid container spacing={3}>
-                                                <Grid item xs={12} md={6}>
+                                            {course.is_subcourse && (
+                                                <Fade in={course.is_subcourse}>
                                                     <FormControl
                                                         fullWidth
-                                                        error={!!errors.department}
-                                                        disabled={loadingDepartments}
+                                                        error={!!errors.parent_course_id}
+                                                        sx={{ mt: 2, animation: "fadeIn 0.5s ease" }}
                                                     >
-                                                        <InputLabel id="department-label">
-                                                            <Box display="flex" alignItems="center" gap={0.5}>
-                                                                <SchoolIcon fontSize="small" />
-                                                                <span>Chuyên ngành</span>
-                                                            </Box>
-                                                        </InputLabel>
+                                                        <InputLabel id="parent-course-label">Môn học chính</InputLabel>
                                                         <Select
-                                                            labelId="department-label"
-                                                            value={course.departmentId || course.department || ""}
-                                                            name="departmentId"
-                                                            label="⚓ Chuyên ngành"
+                                                            labelId="parent-course-label"
+                                                            value={
+                                                                course.parent_course_id || course.parent_course || ""
+                                                            }
+                                                            name="parent_course_id"
+                                                            label="Môn học chính"
                                                             onChange={handleInputChange}
+                                                            disabled={loadingMainCourses}
                                                             endAdornment={
-                                                                loadingDepartments && (
+                                                                loadingMainCourses && (
                                                                     <CircularProgress size={20} sx={{ mr: 2 }} />
                                                                 )
                                                             }
                                                         >
-                                                            {departments.map((dept) => (
+                                                            {mainCourses.map((mainCourse) => (
                                                                 <MenuItem
-                                                                    key={dept._id || dept.id}
-                                                                    value={dept._id || dept.id}
+                                                                    key={mainCourse._id || mainCourse.id}
+                                                                    value={mainCourse._id || mainCourse.id}
                                                                 >
-                                                                    {dept.name}
+                                                                    <Box display="flex" alignItems="center" gap={1}>
+                                                                        <BookIcon fontSize="small" color="primary" />
+                                                                        <span>
+                                                                            {mainCourse.code} - {mainCourse.name}
+                                                                        </span>
+                                                                    </Box>
                                                                 </MenuItem>
                                                             ))}
                                                         </Select>
-                                                        {errors.department && (
-                                                            <FormHelperText error>{errors.department}</FormHelperText>
+                                                        {errors.parent_course_id && (
+                                                            <FormHelperText error>
+                                                                {errors.parent_course_id}
+                                                            </FormHelperText>
                                                         )}
                                                     </FormControl>
-                                                </Grid>
-
-                                                <Grid item xs={12} md={6}>
-                                                    <TextField
-                                                        fullWidth
-                                                        label="Mã môn học"
-                                                        name="code"
-                                                        value={course.code || ""}
-                                                        onChange={handleInputChange}
-                                                        error={!!errors.code}
-                                                        helperText={errors.code}
-                                                        variant="outlined"
-                                                    />
-                                                </Grid>
-
-                                                <Grid item xs={12}>
-                                                    <TextField
-                                                        fullWidth
-                                                        label="Tên môn học"
-                                                        name="name"
-                                                        value={course.name || ""}
-                                                        onChange={handleInputChange}
-                                                        error={!!errors.name}
-                                                        helperText={errors.name}
-                                                        variant="outlined"
-                                                    />
-                                                </Grid>
-
-                                                <Grid item xs={12}>
-                                                    <TextField
-                                                        fullWidth
-                                                        label="Mô tả"
-                                                        name="description"
-                                                        value={course.description || ""}
-                                                        onChange={handleInputChange}
-                                                        multiline
-                                                        rows={3}
-                                                        variant="outlined"
-                                                    />
-                                                </Grid>
-                                            </Grid>
-
-                                            <Divider sx={{ my: 3 }} />
-
-                                            {/* Hours Configuration */}
-                                            <Card
-                                                sx={{
-                                                    mb: 1,
-                                                    mt: 1,
-                                                    borderRadius: 2,
-                                                    backgroundColor: "rgba(250, 250, 250, 0.8)",
-                                                }}
+                                                </Fade>
+                                            )}
+                                        </CardContent>
+                                    </Card>
+                                </Grid>
+                                <Divider sx={{ my: 3 }} />
+                                <Grid container rowSpacing={1} columnSpacing={{ xs: 1, sm: 2, md: 3 }}>
+                                    <Grid size={6}>
+                                        <FormControl
+                                            fullWidth
+                                            error={!!errors.department}
+                                            disabled={loadingDepartments}
+                                        >
+                                            <InputLabel id="department-label">
+                                                <Box display="flex" alignItems="center" gap={0.5}>
+                                                    <SchoolIcon fontSize="small" />
+                                                    <span>Chuyên ngành</span>
+                                                </Box>
+                                            </InputLabel>
+                                            <Select
+                                                labelId="department-label"
+                                                value={course.departmentId || course.department || ""}
+                                                name="departmentId"
+                                                label="⚓ Chuyên ngành"
+                                                onChange={handleInputChange}
+                                                endAdornment={
+                                                    loadingDepartments && <CircularProgress size={20} sx={{ mr: 2 }} />
+                                                }
                                             >
-                                                <CardContent>
-                                                    <Box display="flex" alignItems="center" gap={1} mb={2}>
-                                                        <TimerIcon color="primary" />
-                                                        <Typography
-                                                            variant="subtitle1"
-                                                            fontWeight="medium"
-                                                            color="primary.main"
-                                                        >
-                                                            Phân bổ tiết học
-                                                        </Typography>
-                                                    </Box>
+                                                {departments.map((dept) => (
+                                                    <MenuItem key={dept._id || dept.id} value={dept._id || dept.id}>
+                                                        {dept.name}
+                                                    </MenuItem>
+                                                ))}
+                                            </Select>
+                                            {errors.department && (
+                                                <FormHelperText error>{errors.department}</FormHelperText>
+                                            )}
+                                        </FormControl>
+                                    </Grid>
 
-                                                    {hasChildCourses ? (
-                                                        <Alert severity="info" sx={{ mb: 2 }}>
-                                                            <AlertTitle>Thông báo</AlertTitle>
-                                                            Môn học này có các môn học con. Thời lượng sẽ được tính tự
-                                                            động từ tổng thời lượng của các môn học con.
-                                                        </Alert>
-                                                    ) : (
+                                    <Grid size={6}>
+                                        <TextField
+                                            fullWidth
+                                            label="Mã môn học"
+                                            name="code"
+                                            value={course.code || ""}
+                                            onChange={handleInputChange}
+                                            error={!!errors.code}
+                                            helperText={errors.code}
+                                            required
+                                            InputProps={{
+                                                startAdornment: (
+                                                    <Box component="span" mr={1}>
+                                                        #
+                                                    </Box>
+                                                ),
+                                            }}
+                                        />
+                                    </Grid>
+                                </Grid>
+                                <Divider sx={{ my: 3 }} />
+                                <Grid container rowSpacing={1} columnSpacing={{ xs: 1, sm: 2, md: 3 }}>
+                                    <Grid size={4}>
+                                        <TextField
+                                            fullWidth
+                                            label="Tên môn học"
+                                            name="name"
+                                            value={course.name || ""}
+                                            onChange={handleInputChange}
+                                            error={!!errors.name}
+                                            helperText={errors.name}
+                                            required
+                                            InputProps={{
+                                                startAdornment: (
+                                                    <BookIcon fontSize="small" sx={{ mr: 1, color: "primary.main" }} />
+                                                ),
+                                            }}
+                                        />
+                                    </Grid>
+
+                                    <Grid size={8}>
+                                        <TextField
+                                            fullWidth
+                                            label="Mô tả"
+                                            name="description"
+                                            value={course.description || ""}
+                                            onChange={handleInputChange}
+                                            rows={3}
+                                            InputProps={{
+                                                startAdornment: (
+                                                    <InfoIcon fontSize="small" sx={{ mr: 1, color: "primary.main" }} />
+                                                ),
+                                            }}
+                                        />
+                                    </Grid>
+                                </Grid>
+                                <Divider sx={{ my: 3 }} />
+                                <Grid container rowSpacing={1} columnSpacing={{ xs: 1, sm: 2, md: 3 }}>
+                                    <Grid item xs={12}>
+                                        <Card
+                                            sx={{
+                                                mb: 1,
+                                                mt: 1,
+                                                borderRadius: 2,
+                                                backgroundColor: "rgba(250, 250, 250, 0.8)",
+                                            }}
+                                        >
+                                            <CardContent>
+                                                <Box display="flex" alignItems="center" gap={1} mb={2}>
+                                                    <TimerIcon color="primary" />
+                                                    <Typography
+                                                        variant="subtitle1"
+                                                        fontWeight="medium"
+                                                        color="primary.main"
+                                                    >
+                                                        Phân bổ tiết học
+                                                    </Typography>
+                                                </Box>
+
+                                                {hasChildCourses ? (
+                                                    <Alert severity="info" sx={{ mb: 2 }}>
+                                                        <AlertTitle>Thông báo</AlertTitle>
+                                                        Môn học này có các môn học con. Thời lượng sẽ được tính tự động
+                                                        từ tổng thời lượng của các môn học con.
+                                                    </Alert>
+                                                ) : (
+                                                    <>
                                                         <Grid container spacing={3}>
                                                             <Grid item xs={12} md={4}>
                                                                 <TextField
@@ -705,6 +706,7 @@ const CourseForm = () => {
                                                                     sx={{ mb: 2 }}
                                                                 />
                                                             </Grid>
+
                                                             <Grid item xs={12} md={4}>
                                                                 <TextField
                                                                     fullWidth
@@ -730,13 +732,16 @@ const CourseForm = () => {
                                                                     sx={{ mb: 2 }}
                                                                 />
                                                             </Grid>
+
                                                             <Grid item xs={12} md={4}>
                                                                 <TextField
                                                                     fullWidth
                                                                     label="Tổng số tiết"
                                                                     value={course.total_hours}
+                                                                    disabled
+                                                                    error={!!errors.total_hours}
+                                                                    helperText={errors.total_hours}
                                                                     InputProps={{
-                                                                        readOnly: true,
                                                                         endAdornment: (
                                                                             <Box
                                                                                 component="span"
@@ -751,65 +756,96 @@ const CourseForm = () => {
                                                                 />
                                                             </Grid>
                                                         </Grid>
-                                                    )}
-                                                </CardContent>
-                                            </Card>
-                                        </>
-                                    )}
-                                </Box>
 
-                                {/* Tab Panel 1: Course Configuration */}
-                                <Box role="tabpanel" hidden={activeTab !== 1} id="tabpanel-1" aria-labelledby="tab-1">
-                                    {activeTab === 1 && (
-                                        <CourseConfigurationForm
-                                            course={course}
-                                            onConfigurationChange={handleConfigurationChange}
-                                        />
-                                    )}
-                                </Box>
+                                                        <Box sx={{ mt: 1 }}>
+                                                            <Box display="flex" justifyContent="space-between" mb={0.5}>
+                                                                <Typography variant="body2">Lý thuyết</Typography>
+                                                                <Typography variant="body2">Thực hành</Typography>
+                                                            </Box>
+                                                            <Box
+                                                                sx={{
+                                                                    width: "100%",
+                                                                    display: "flex",
+                                                                    alignItems: "center",
+                                                                }}
+                                                            >
+                                                                <Box
+                                                                    sx={{
+                                                                        width: `${theoryHoursRatio}%`,
+                                                                        bgcolor: "primary.main",
+                                                                        height: 10,
+                                                                        borderRadius: "10px 0 0 10px",
+                                                                    }}
+                                                                />
+                                                                <Box
+                                                                    sx={{
+                                                                        width: `${100 - theoryHoursRatio}%`,
+                                                                        bgcolor: "success.main",
+                                                                        height: 10,
+                                                                        borderRadius: "0 10px 10px 0",
+                                                                    }}
+                                                                />
+                                                            </Box>
+                                                            <Box display="flex" justifyContent="space-between" mt={0.5}>
+                                                                <Typography variant="caption" color="text.secondary">
+                                                                    {theoryHoursRatio}% ({course.theory_hours} tiết)
+                                                                </Typography>
+                                                                <Typography variant="caption" color="text.secondary">
+                                                                    {100 - theoryHoursRatio}% ({course.practical_hours}{" "}
+                                                                    tiết)
+                                                                </Typography>
+                                                            </Box>
+                                                        </Box>
+                                                    </>
+                                                )}
+                                            </CardContent>
+                                        </Card>
+                                    </Grid>
 
-                                {/* Submit Button */}
-                                <Box
-                                    sx={{
-                                        mt: 4,
-                                        display: "flex",
-                                        justifyContent: "space-between",
-                                        alignItems: "center",
-                                        gap: 2,
-                                    }}
-                                >
-                                    {isEditMode ? (
-                                        <Button
-                                            variant="outlined"
-                                            color="error"
-                                            startIcon={<DeleteIcon />}
-                                            onClick={handleDelete}
-                                            sx={{ borderRadius: 2 }}
-                                        >
-                                            Xóa môn học
-                                        </Button>
-                                    ) : (
-                                        <Box /> // Empty box to maintain layout
-                                    )}
-                                    <Button
-                                        type="submit"
-                                        variant="contained"
-                                        color="primary"
-                                        startIcon={
-                                            saving ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />
-                                        }
-                                        disabled={saving}
-                                        sx={{
-                                            borderRadius: 2,
-                                            boxShadow: "0 4px 10px rgba(0, 0, 0, 0.1)",
-                                            "&:hover": {
-                                                boxShadow: "0 6px 15px rgba(0, 0, 0, 0.2)",
-                                            },
-                                        }}
-                                    >
-                                        {saving ? "Đang lưu..." : isEditMode ? "Cập nhật môn học" : "Lưu môn học"}
-                                    </Button>
-                                </Box>
+                                    <Grid sx={{ mt: 2, xs: 12 }}>
+                                        <Box display="flex" justifyContent="space-between" alignItems="center" gap={2}>
+                                            {isEditMode ? (
+                                                <Button
+                                                    variant="outlined"
+                                                    color="error"
+                                                    startIcon={<DeleteIcon />}
+                                                    onClick={handleDelete}
+                                                    sx={{ borderRadius: 2 }}
+                                                >
+                                                    Xóa môn học
+                                                </Button>
+                                            ) : (
+                                                <Box /> // Empty box to maintain layout
+                                            )}
+                                            <Button
+                                                type="submit"
+                                                variant="contained"
+                                                color="primary"
+                                                startIcon={
+                                                    saving ? (
+                                                        <CircularProgress size={20} color="inherit" />
+                                                    ) : (
+                                                        <SaveIcon />
+                                                    )
+                                                }
+                                                disabled={saving}
+                                                sx={{
+                                                    borderRadius: 2,
+                                                    boxShadow: "0 4px 10px rgba(0, 0, 0, 0.1)",
+                                                    "&:hover": {
+                                                        boxShadow: "0 6px 15px rgba(0, 0, 0, 0.2)",
+                                                    },
+                                                }}
+                                            >
+                                                {saving
+                                                    ? "Đang lưu..."
+                                                    : isEditMode
+                                                    ? "Cập nhật môn học"
+                                                    : "Lưu môn học"}
+                                            </Button>
+                                        </Box>
+                                    </Grid>
+                                </Grid>
                             </Box>
                         </Fade>
                     )}

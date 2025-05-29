@@ -200,8 +200,22 @@ app.post("/api/courses", async (req, res) => {
 
 app.put("/api/courses/:id", async (req, res) => {
     try {
-        const { code, name, parent_course, total_hours, theory_hours, practical_hours, department, description } =
-            req.body;
+        const {
+            code,
+            name,
+            parent_course,
+            total_hours,
+            theory_hours,
+            practical_hours,
+            department,
+            description,
+            max_hours_per_week,
+            max_hours_per_day,
+            max_morning_hours,
+            max_afternoon_hours,
+            min_days_before_exam,
+            exam_duration,
+        } = req.body;
 
         const course = await Course.findByIdAndUpdate(
             req.params.id,
@@ -214,6 +228,12 @@ app.put("/api/courses/:id", async (req, res) => {
                 practical_hours,
                 department,
                 description,
+                max_hours_per_week,
+                max_hours_per_day,
+                max_morning_hours,
+                max_afternoon_hours,
+                min_days_before_exam,
+                exam_duration,
             },
             { new: true }
         );
@@ -385,7 +405,6 @@ app.get("/api/schedules", async (req, res) => {
             if (timeA[0] !== timeB[0]) return timeA[0] - timeB[0];
             return timeA[1] - timeB[1];
         });
-
         res.json(
             schedules.map((schedule) => ({
                 id: schedule._id,
@@ -403,13 +422,20 @@ app.get("/api/schedules", async (req, res) => {
                 is_self_study: schedule.is_self_study,
                 is_flag_ceremony: schedule.is_flag_ceremony || false,
                 is_holiday: schedule.is_holiday || false,
+                is_special_day: schedule.is_special_day || false,
                 is_canceled: schedule.is_canceled || false,
+                is_maintenance: schedule.is_maintenance || false,
+                is_break: schedule.is_break || false,
+                has_special_event: schedule.has_special_event || false,
+                event_type: schedule.event_type || null,
+                special_event_name: schedule.special_event_name || schedule.special_event?.name,
                 special_event_id: schedule.special_event?._id,
-                special_event_name: schedule.special_event?.name,
                 special_event_type: schedule.special_event?.type,
                 special_event_description: schedule.special_event?.description,
                 actual_date: schedule.actual_date,
                 date_str: schedule.actual_date ? schedule.actual_date.toISOString().split("T")[0] : null,
+                exam_phase: schedule.exam_phase || 1,
+                total_phases: schedule.total_phases || 1,
                 notes: schedule.notes,
             }))
         );
@@ -432,6 +458,8 @@ app.post("/api/schedules", async (req, res) => {
             is_exam,
             is_self_study,
             special_event_id,
+            exam_phase,
+            total_phases,
             notes,
         } = req.body;
 
@@ -441,9 +469,7 @@ app.post("/api/schedules", async (req, res) => {
                 error: "Missing required fields",
                 required: "day_of_week, start_time, end_time",
             });
-        }
-
-        // Tạo schedule mới
+        } // Tạo schedule mới
         const newSchedule = new Schedule({
             class: class_id,
             course: course_id,
@@ -455,6 +481,8 @@ app.post("/api/schedules", async (req, res) => {
             is_exam: is_exam || false,
             is_self_study: is_self_study || false,
             special_event: special_event_id,
+            exam_phase: exam_phase || 1,
+            total_phases: total_phases || 1,
             notes,
         });
 
@@ -481,6 +509,8 @@ app.post("/api/schedules", async (req, res) => {
             is_exam: populatedSchedule.is_exam,
             is_self_study: populatedSchedule.is_self_study,
             special_event_id: populatedSchedule.special_event?._id,
+            exam_phase: populatedSchedule.exam_phase || 1,
+            total_phases: populatedSchedule.total_phases || 1,
             notes: populatedSchedule.notes,
         });
     } catch (error) {
@@ -644,22 +674,52 @@ app.get("/api/events/department/:departmentId", async (req, res) => {
 
 app.post("/api/events", async (req, res) => {
     try {
-        const { name, description, date, duration_days, recurring, recurring_pattern } = req.body;
-
-        const event = new SpecialEvent({
+        const {
             name,
             description,
             date,
+            start_date,
+            end_date,
             duration_days,
             recurring,
             recurring_pattern,
-        });
+            type,
+            timeConfigType,
+            department,
+        } = req.body;
 
+        const eventData = {
+            name,
+            description,
+            duration_days,
+            recurring,
+            recurring_pattern,
+            type,
+            timeConfigType,
+            department,
+        };
+
+        // Handle date fields based on timeConfigType
+        if (timeConfigType === "range" && start_date && end_date) {
+            eventData.start_date = start_date;
+            eventData.end_date = end_date;
+            // Set date to start_date for compatibility
+            eventData.date = start_date;
+        } else if (date) {
+            eventData.date = date;
+            // Set start_date for compatibility
+            eventData.start_date = date;
+        } else if (start_date) {
+            eventData.start_date = start_date;
+            eventData.date = start_date;
+        }
+
+        const event = new SpecialEvent(eventData);
         const savedEvent = await event.save();
         res.status(201).json(savedEvent);
     } catch (error) {
         console.error("Error creating event:", error);
-        res.status(500).json({ error: "Failed to create event" });
+        res.status(500).json({ error: "Failed to create event", details: error.message });
     }
 });
 
@@ -712,137 +772,168 @@ app.post("/api/schedule/generate", async (req, res) => {
                 console.error("Error clearing existing schedules:", error);
                 // Continue with new schedule creation even if clearing fails
             }
-        } // Declare variables outside the if block so they're accessible in the response
+        }
+
+        // Declare variables outside the if block so they're accessible in the response
         const bulkOps = [];
         const errors = [];
-        let successCount = 0; // Process schedule details if provided
-        if (schedule_details && Array.isArray(schedule_details)) {
-            console.log(`Processing ${schedule_details.length} schedule items to save`);
-            try {
-                // Lấy danh sách các môn học thực hành
-                const practicalCourses = [];
-                if (courses && Array.isArray(courses)) {
-                    for (const course of courses) {
-                        if (course.is_practical || course.type === "practical") {
-                            practicalCourses.push(course._id || course.id);
-                        }
+        let successCount = 0;
+        let detailsToProcess = []; // Will be set to processed or original details
+
+        // Always process constraints even if schedule_details is empty (to generate maintenance periods)
+        // Initialize properly, ensuring we always have an array
+        detailsToProcess = Array.isArray(schedule_details) ? schedule_details : [];
+        console.log(`Processing ${detailsToProcess.length} schedule items to save`);
+
+        try {
+            // Lấy danh sách các môn học thực hành
+            const practicalCourses = [];
+            if (courses && Array.isArray(courses)) {
+                for (const course of courses) {
+                    if (course.is_practical || course.type === "practical") {
+                        practicalCourses.push(course._id || course.id);
                     }
                 }
+            }
+            console.log(`Found ${practicalCourses.length} practical courses`);
 
-                console.log(`Found ${practicalCourses.length} practical courses`); // Áp dụng tất cả các ràng buộc (sự kiện đặc biệt, thời gian, v.v.)
-                const processedDetails = await constraintProcessor.applyAllConstraints(schedule_details, {
-                    events,
-                    constraints,
-                    departmentId: department_id,
-                    startDate: start_date,
-                    practicalCourses,
-                    courseExams: courses, // Pass course configs for exam scheduling
-                });
+            // Áp dụng tất cả các ràng buộc (sự kiện đặc biệt, thời gian, v.v.)
+            const processedDetails = await constraintProcessor.applyAllConstraints(detailsToProcess, {
+                events,
+                constraints,
+                departmentId: department_id,
+                startDate: start_date,
+                practicalCourses,
+                courseExams: courses, // Pass course configs for exam scheduling
+                coursesData: courses, // Pass course data for self-study calculation
+                totalWeeks: total_weeks, // Pass total weeks for self-study calculation
+            });
 
-                console.log(
-                    `After applying constraints: ${processedDetails.length} items remain (processed ${schedule_details.length} items)`
+            console.log(
+                `After applying constraints: ${processedDetails.length} items remain (processed ${schedule_details.length} items)`
+            );
+
+            // Use processed details instead of original details
+            detailsToProcess = processedDetails;
+        } catch (error) {
+            console.error("Error applying schedule constraints:", error);
+            // Continue with original details if error occurs
+            console.log("Continuing with original schedule details");
+            detailsToProcess = schedule_details;
+        }
+
+        // Prepare bulk operations
+        for (const detail of detailsToProcess) {
+            try {
+                // Handle special events like maintenance periods that may have null class_id/course_id
+                const isSpecialEvent = detail.is_maintenance || detail.is_break || detail.event_type;
+
+                // Make sure we have valid MongoDB ObjectIds for regular schedules
+                const classId = mongoose.Types.ObjectId.isValid(detail.class_id) ? detail.class_id : null;
+                const courseId = mongoose.Types.ObjectId.isValid(detail.course_id) ? detail.course_id : null;
+
+                // For regular schedules, both class_id and course_id are required
+                // For special events (maintenance, breaks), they can be null
+                if (!isSpecialEvent && (!classId || !courseId)) {
+                    console.error("Invalid ObjectId found for regular schedule:", {
+                        class_id: detail.class_id,
+                        course_id: detail.course_id,
+                        valid_class: mongoose.Types.ObjectId.isValid(detail.class_id),
+                        valid_course: mongoose.Types.ObjectId.isValid(detail.course_id),
+                        event_type: detail.event_type,
+                    });
+                    continue; // Skip this invalid entry
+                }
+
+                // Tính toán ngày thực tế
+                const actualDate = constraintProcessor.calculateActualDate(
+                    detail.week_number,
+                    detail.day_of_week,
+                    start_date
                 );
 
-                // Sử dụng danh sách đã xử lý ràng buộc thay vì danh sách gốc
-                schedule_details = processedDetails;
+                // Kiểm tra xem ngày này có phải là sự kiện đặc biệt không
+                const specialEvent = await constraintProcessor.getSpecialEventOnDate(actualDate, department_id); // Create document to insert
+                const scheduleDoc = {
+                    class: classId,
+                    course: courseId,
+                    day_of_week: detail.day_of_week,
+                    week_number: detail.week_number,
+                    start_time: detail.start_time,
+                    end_time: detail.end_time,
+                    is_practical: detail.is_practical || false,
+                    is_exam: detail.is_exam || false,
+                    is_self_study: detail.is_self_study || false,
+                    special_event: specialEvent ? specialEvent._id : null,
+                    notes: detail.notes || (specialEvent ? `Affected by: ${specialEvent.name}` : null),
+                    actual_date: actualDate,
+                    // Add special event fields
+                    is_maintenance: detail.is_maintenance || false,
+                    is_break: detail.is_break || false,
+                    is_holiday: detail.is_holiday || false,
+                    is_special_day: detail.is_special_day || false,
+                    is_canceled: detail.is_canceled || false,
+                    is_flag_ceremony: detail.is_flag_ceremony || false,
+                    has_special_event: detail.has_special_event || false,
+                    event_type: detail.event_type || null,
+                    special_event_name: detail.special_event_name || null,
+                };
+
+                bulkOps.push({
+                    insertOne: {
+                        document: scheduleDoc,
+                    },
+                });
             } catch (error) {
-                console.error("Error applying schedule constraints:", error);
-                // Tiếp tục xử lý với danh sách gốc nếu có lỗi
-                console.log("Continuing with original schedule details");
-            }
-
-            // Prepare bulk operations
-            for (const detail of schedule_details) {
-                try {
-                    // Make sure we have valid MongoDB ObjectIds
-                    const classId = mongoose.Types.ObjectId.isValid(detail.class_id) ? detail.class_id : null;
-                    const courseId = mongoose.Types.ObjectId.isValid(detail.course_id) ? detail.course_id : null;
-
-                    if (!classId || !courseId) {
-                        console.error("Invalid ObjectId found:", {
-                            class_id: detail.class_id,
-                            course_id: detail.course_id,
-                            valid_class: mongoose.Types.ObjectId.isValid(detail.class_id),
-                            valid_course: mongoose.Types.ObjectId.isValid(detail.course_id),
-                        });
-                        continue; // Skip this invalid entry
-                    } // Tính toán ngày thực tế
-                    const actualDate = constraintProcessor.calculateActualDate(
-                        detail.week_number,
-                        detail.day_of_week,
-                        start_date
-                    );
-
-                    // Kiểm tra xem ngày này có phải là sự kiện đặc biệt không
-                    const specialEvent = await constraintProcessor.getSpecialEventOnDate(actualDate, department_id);
-
-                    // Create document to insert
-                    const scheduleDoc = {
-                        class: classId,
-                        course: courseId,
-                        day_of_week: detail.day_of_week,
-                        week_number: detail.week_number,
-                        start_time: detail.start_time,
-                        end_time: detail.end_time,
-                        is_practical: detail.is_practical || false,
-                        is_exam: detail.is_exam || false,
-                        is_self_study: detail.is_self_study || false,
-                        special_event: specialEvent ? specialEvent._id : null,
-                        notes: detail.notes || (specialEvent ? `Affected by: ${specialEvent.name}` : null),
-                        actual_date: actualDate,
-                    };
-
-                    bulkOps.push({
-                        insertOne: {
-                            document: scheduleDoc,
-                        },
-                    });
-                } catch (error) {
-                    console.error("Error preparing schedule item:", error);
-                    errors.push({
-                        detail,
-                        error: error.message,
-                    });
-                }
-            } // Process in smaller chunks to avoid memory issues
-            const CHUNK_SIZE = 1000;
-
-            for (let i = 0; i < bulkOps.length; i += CHUNK_SIZE) {
-                const chunk = bulkOps.slice(i, i + CHUNK_SIZE);
-                if (chunk.length === 0) continue;
-
-                try {
-                    console.log(`Processing chunk ${Math.floor(i / CHUNK_SIZE) + 1} with ${chunk.length} operations`);
-                    const result = await Schedule.bulkWrite(chunk, { ordered: false });
-                    successCount += result.insertedCount;
-                } catch (error) {
-                    console.error(`Error in bulk write operation for chunk ${Math.floor(i / CHUNK_SIZE) + 1}:`, error);
-                    // Continue with next chunk even if this one fails
-                }
-            }
-
-            console.log(`Successfully saved ${successCount} schedule items`);
-            if (errors.length > 0) {
-                console.error(`Failed to save ${errors.length} schedule items`);
-            }
-
-            // If this is a batch process, include batch info in response
-            if (is_batch_process) {
-                return res.status(200).json({
-                    success: true,
-                    message: `Batch ${batch_id}/${total_batches} processed successfully`,
-                    batch_id: batch_id,
-                    items_saved: successCount,
-                    errors: errors.length,
+                console.error("Error preparing schedule item:", error);
+                errors.push({
+                    detail,
+                    error: error.message,
                 });
             }
         }
+
+        // Process in smaller chunks to avoid memory issues
+        const CHUNK_SIZE = 1000;
+
+        for (let i = 0; i < bulkOps.length; i += CHUNK_SIZE) {
+            const chunk = bulkOps.slice(i, i + CHUNK_SIZE);
+            if (chunk.length === 0) continue;
+
+            try {
+                console.log(`Processing chunk ${Math.floor(i / CHUNK_SIZE) + 1} with ${chunk.length} operations`);
+                const result = await Schedule.bulkWrite(chunk, { ordered: false });
+                successCount += result.insertedCount;
+            } catch (error) {
+                console.error(`Error in bulk write operation for chunk ${Math.floor(i / CHUNK_SIZE) + 1}:`, error);
+                // Continue with next chunk even if this one fails
+            }
+        }
+
+        console.log(`Successfully saved ${successCount} schedule items`);
+        if (errors.length > 0) {
+            console.error(`Failed to save ${errors.length} schedule items`);
+        }
+
+        // If this is a batch process, include batch info in response
+        if (is_batch_process) {
+            return res.status(200).json({
+                success: true,
+                message: `Batch ${batch_id}/${total_batches} processed successfully`,
+                batch_id: batch_id,
+                items_saved: successCount,
+                errors: errors.length,
+                processed_details: detailsToProcess, // Include processed details for verification
+            });
+        }
+
         res.status(200).json({
             success: true,
             message: "Schedule generated successfully",
             items_saved: successCount,
             total_operations: bulkOps.length,
             errors: errors.length,
+            processed_details: detailsToProcess, // Include processed details for verification
         });
     } catch (error) {
         console.error("Error generating schedule:", error);
@@ -851,6 +942,86 @@ app.post("/api/schedule/generate", async (req, res) => {
             message: error.message,
             stack: process.env.NODE_ENV === "development" ? error.stack : undefined,
         });
+    }
+});
+
+// API endpoint to get course handler information for courses
+app.get("/api/courses/:id/handler", async (req, res) => {
+    try {
+        const course = await Course.findById(req.params.id).select("code name");
+
+        if (!course) {
+            return res.status(404).json({ error: "Course not found" });
+        }
+
+        const CourseHandlerRegistry = require("./course-handlers/course-handler-registry");
+        const handler = CourseHandlerRegistry.getHandler(course.code);
+
+        if (!handler) {
+            return res.json({
+                hasHandler: false,
+                courseCode: course.code,
+                courseName: course.name,
+            });
+        }
+
+        const handlerInfo = {
+            hasHandler: true,
+            courseCode: course.code,
+            courseName: course.name,
+            handlerName: handler.getDisplayName(),
+            constraints: handler.getSpecificConstraints(),
+            examStrategy: handler.getExamStrategy(),
+        };
+
+        res.json(handlerInfo);
+    } catch (error) {
+        console.error(`Error getting course handler for course ${req.params.id}:`, error);
+        res.status(500).json({ error: "Failed to get course handler information" });
+    }
+});
+
+// API endpoint to get available course handlers
+app.get("/api/course-handlers", async (req, res) => {
+    try {
+        const CourseHandlerRegistry = require("./course-handlers/course-handler-registry");
+        const availableHandlers = CourseHandlerRegistry.getAvailableHandlers();
+
+        res.json({
+            handlers: availableHandlers.map((handler) => ({
+                name: handler.getDisplayName(),
+                courseCode: handler.courseCode,
+                constraints: handler.getSpecificConstraints(),
+                examStrategy: handler.getExamStrategy(),
+            })),
+        });
+    } catch (error) {
+        console.error("Error getting available course handlers:", error);
+        res.status(500).json({ error: "Failed to get course handlers" });
+    }
+});
+
+// API endpoint to get course handler for specific course
+app.get("/api/course-handlers/:courseCode", async (req, res) => {
+    try {
+        const CourseHandlerRegistry = require("./course-handlers/course-handler-registry");
+        const { courseCode } = req.params;
+        const handler = CourseHandlerRegistry.getHandler(courseCode);
+
+        if (!handler) {
+            return res.status(404).json({ error: "No handler found for this course" });
+        }
+
+        res.json({
+            name: handler.getDisplayName(),
+            courseCode: handler.courseCode,
+            constraints: handler.getSpecificConstraints(),
+            examStrategy: handler.getExamStrategy(),
+            matches: true,
+        });
+    } catch (error) {
+        console.error("Error getting course handler:", error);
+        res.status(500).json({ error: "Failed to get course handler" });
     }
 });
 

@@ -1,8 +1,8 @@
 import React from "react";
-import PropTypes from "prop-types";
 import {
     Box,
     Typography,
+    Paper,
     Grid,
     FormControl,
     InputLabel,
@@ -78,7 +78,7 @@ const Step3CourseConfig = ({ scheduleConfig, setScheduleConfig }) => {
                                         onChange={(e) =>
                                             handleConfigUpdate("defaultExamDuration", parseInt(e.target.value) || 6)
                                         }
-                                        slotProps={{ input: { min: 1, max: 12 } }}
+                                        inputProps={{ min: 1, max: 12 }}
                                         helperText="Thời lượng mặc định cho các bài thi (1-12 tiết)"
                                     />
                                 </Grid>
@@ -92,7 +92,7 @@ const Step3CourseConfig = ({ scheduleConfig, setScheduleConfig }) => {
                                         onChange={(e) =>
                                             handleConfigUpdate("minExamGap", parseInt(e.target.value) || 1)
                                         }
-                                        slotProps={{ input: { min: 0, max: 7 } }}
+                                        inputProps={{ min: 0, max: 7 }}
                                         helperText="Số ngày tối thiểu giữa các buổi thi liên tiếp"
                                     />
                                 </Grid>
@@ -106,7 +106,7 @@ const Step3CourseConfig = ({ scheduleConfig, setScheduleConfig }) => {
                                         onChange={(e) =>
                                             handleConfigUpdate("maxExamsPerWeek", parseInt(e.target.value) || 3)
                                         }
-                                        slotProps={{ input: { min: 1, max: 6 } }}
+                                        inputProps={{ min: 1, max: 6 }}
                                         helperText="Giới hạn số buổi thi trong một tuần"
                                     />
                                 </Grid>
@@ -153,7 +153,7 @@ const Step3CourseConfig = ({ scheduleConfig, setScheduleConfig }) => {
                                                         parseInt(e.target.value) || 4
                                                     )
                                                 }
-                                                slotProps={{ input: { min: 1, max: 12 } }}
+                                                inputProps={{ min: 1, max: 12 }}
                                                 helperText="Số tuần giữa các lần kiểm tra định kỳ"
                                             />
                                         </Grid>
@@ -170,7 +170,7 @@ const Step3CourseConfig = ({ scheduleConfig, setScheduleConfig }) => {
                                                         parseInt(e.target.value) || 2
                                                     )
                                                 }
-                                                slotProps={{ input: { min: 1, max: 6 } }}
+                                                inputProps={{ min: 1, max: 6 }}
                                                 helperText="Thời lượng cho mỗi bài kiểm tra định kỳ"
                                             />
                                         </Grid>
@@ -261,7 +261,8 @@ const Step3CourseConfig = ({ scheduleConfig, setScheduleConfig }) => {
                         Đây là cấu hình chung cho toàn bộ hệ thống lịch thi. Cấu hình chi tiết cho từng môn học (số
                         tiết, phân bổ lý thuyết/thực hành, ghép lớp, v.v.) được thực hiện trong phần{" "}
                         <strong>Quản lý môn học</strong> với giao diện tab mới.
-                        <br /> <br />
+                        <br />
+                        <br />
                         Các môn học đặc biệt như V30/V31 sẽ có cấu hình riêng biệt được xử lý tự động thông qua các
                         handler chuyên biệt.
                     </Typography>
@@ -269,23 +270,6 @@ const Step3CourseConfig = ({ scheduleConfig, setScheduleConfig }) => {
             </Box>
         </Box>
     );
-};
-
-Step3CourseConfig.propTypes = {
-    scheduleConfig: PropTypes.shape({
-        preferredExamTime: PropTypes.string,
-        defaultExamDuration: PropTypes.number,
-        minExamGap: PropTypes.number,
-        maxExamsPerWeek: PropTypes.number,
-        enablePeriodicTests: PropTypes.bool,
-        periodicTestInterval: PropTypes.number,
-        periodicTestDuration: PropTypes.number,
-        periodicTestTime: PropTypes.string,
-        avoidFridayExams: PropTypes.bool,
-        prioritizeMorningExams: PropTypes.bool,
-        allowBackToBackExams: PropTypes.bool,
-    }).isRequired,
-    setScheduleConfig: PropTypes.func.isRequired,
 };
 
 export default Step3CourseConfig;

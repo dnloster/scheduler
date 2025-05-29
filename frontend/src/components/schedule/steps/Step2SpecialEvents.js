@@ -605,7 +605,7 @@ const Step2SpecialEvents = ({
                 </Grid>
             </Paper>
 
-            <Paper elevation={1} sx={{ p: 3, borderLeft: "4px solid #9c27b0" }}>
+            {/* <Paper elevation={1} sx={{ p: 3, borderLeft: "4px solid #9c27b0" }}>
                 <Typography variant="h6" gutterBottom color="secondary.main">
                     Thêm sự kiện tùy chỉnh
                 </Typography>
@@ -689,7 +689,7 @@ const Step2SpecialEvents = ({
                         </List>
                     </Box>
                 )}
-            </Paper>
+            </Paper> */}
         </Box>
     );
 };
